@@ -1,0 +1,27 @@
+*{
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container{
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+}
+
+.node-list-menu{
+  flex-width: 1;
+  width: 33vw;
+  height: 100vh;
+  background-color: #999;
+  color: #fff;
+}
+
+.graph{
+  flex-width: 2;
+  width: 66vw;
+  height: 100vh;
+  background-color: #555;
+  color: #fff;
+}

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force-Directed Graph with Node Selection</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        *{
+				  border: 0;
+				  margin: 0;
+				  padding: 0;
+          font-family: Arial;
+				}
+
+				.app-container{
+				  width: 95vw;
+				  height: 95vh;
+				  display: flex;
+				}
+				
+				.node-list-menu{
+				  width: 20vw;
+				  height: 100vh;
+          background-color: #eee;
+				}
+				
+				#graph{
+				  width: 80%;
+				  height: 100%;
+				}
+
+        #node-selector{
+          width: 100%;
+          height: 50%;
+        }
+
+        #node-options{
+          padding: 2px;
+          width: 100%;
+          height: 25%;
+        }
+
+        #update_graph{
+          color: #efefef;
+          background-color: #1967D2;
+          padding: 5px;
+          border: 1px solid #0A3361;
+        }
+
+        #update_graph:active{
+          background-color: #2178E3;
+        }
+
+        #out{
+          visibility: hidden;
+        }
+
+        #drop-down{
+          position: absolute;
+          display: none;
+          background-color: #fff;
+        }
+
+        #drop-down > div{
+          padding: 5px;
+          border: 1px solid black;
+        }
+
+        #drop-down > div:hover{
+          background-color: #eee;
+        }
+
+        .number{
+          width: 25%;
+          padding: 5px;
+          border: 1px solid #000;
+        }
+
+        .text{
+          max-width: 90%;
+          min-width: 90%;
+          height: 50%;
+          padding: 5px;
+          border: 1px solid #000;
+        }
+
+        .node {
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+
+        input{
+          margin: 5px;
+          border: 1px;
+          border-radius: 3px;
+          padding: 3px;
+        }
+
+        .link {
+          stroke: #999;
+          stroke-opacity: 0.6;
+        }
+
+        .label{
+          font-size: 10pt;
+          font-weight: bold;
+          font-family: 'Courier New', Courier, monospace;
+          fill: white;
+          pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="drop-down">
+      <div onclick="set_in_edges()"> edges-in </div>
+      <div onclick="set_out_edges()"> edges-out </div>
+      <div onclick="set_all_edges()"> edges-all </div>
+    </div>
+    <div class="app-container">
+      <div class="node-list-menu">
+        <div id="node-options">
+          <div>
+            <label for="anchor_color">anchor color</label>
+            <input id="anchor_color" type="color" onchange="update_color()"/>
+          </div>
+          <div>
+            <label for="depth">depth</label>
+            <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url());"/>
+          </div>
+          <div>
+            <label for="threshold">threshold</label>
+            <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
+          </div>
+          <div>  
+            <label for="dx10">selection</label>
+            <textarea id="dx10" class="text" placeholder="dx10 codes" onchange="update_selection()"></textarea>
+          </div>
+    <!--  <div>
+            <input id="update_graph" type="button" value="Add Anchor" onclick="load_data(get_url())"/>
+          </div> -->
+          <div>
+            <label for="comparison">comparison string</label>
+            <textarea id="comparison" class="text" placeholder="comparison string" onchange="update_comparison()"></textarea>
+          </div>
+        </div>
+      </div>
+      <div id="graph">
+      </div>
+    </div>
+<script>
+    document.onclick = hide_menu;
+
+    // constants
+    const width = document.getElementById("graph").scrollWidth;   // working width and height for the simulation
+    const height = document.getElementById("graph").scrollHeight; //
+    const drop_down = document.getElementById("drop-down");       // the dropdown menu for right click
+    const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
+    const invokeURL = "http://127.0.0.1:8000";                    // the address of the API
+    
+    // initial values
+    let depth = document.getElementById("depth").value;                   // initial depth = 1
+    let comparison = document.getElementById("comparison").value;         // initial comparison string = ''
+    let name = 'dx10';                                                    // node name column. In the future a menu using the keys should be used to determin this
+    let distance_threshold = document.getElementById("threshold").value;  // initial distance threshold
+    let anchor_color = '#000';                                            // initial anchor color
+    let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
+
+    // graph data
+    let loaded = [];      // list of node names that are currently loaded 
+    let selection = [];   // list of selected node (anchor) names
+    let directions = [];  // list of selected node search directions (0 = Both directions, 1 = edges where this node is the source, 2 = edges where this node is the target)
+    let nodesData = [];   // all the nodes
+    let linksData = [];   // all the edges
+
+    // Create SVG
+    const svg = d3.select("#graph").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .attr("style", "max-width: 100%; height: auto;");
+
+    // Create force simulation
+    const simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(d => d.id))
+        .force("charge", d3.forceManyBody().strength(-200))
+        .force("X", d3.forceX())
+        .force("Y", d3.forceY())
+        .force("sort_y+", d3.forceY())
+        .force("sort_y-", d3.forceY());
+
+    // make the arrow marker to indicate edge direction
+    svg.append("defs")
+       .append("marker")
+       .attr("id", "arrow")
+       .attr("viewBox", [0, 0, 10, 10])
+       .attr("refX", -40)
+       .attr("refY", 5)
+       .attr("markerWidth", 6)
+       .attr("markerHeight", 6)
+       .attr("orient", "auto")
+       .append("path")
+       .attr("cx", 0)
+       .attr("cy", 0)
+       .attr("d", d3.line()([[0, 0], [10, 5], [0, 10]]));
+       
+
+    // Add nodes labels and links to the graph
+    let link = svg.append("g").selectAll(".link");
+    let node = svg.append("g").selectAll(".node");
+    let text = svg.append("g").selectAll(".label");
+
+
+    //
+    // updateGraph this is the d3 rendering and simulation part 
+    //
+    function update_graph() {
+      // Filter nodes and links based on selectedNodeIds
+      let filteredLinks = linksData.filter(d => (1-d.distance) > distance_threshold);
+      
+      window.parent.postMessage({"nodes": nodesData, "links": filteredLinks});
+
+      // Update nodes
+      node = node.data(nodesData, d => d.id);
+      node.exit().remove();
+      node = node.enter()
+          .append("circle")
+          .attr("class", "node")
+          .attr("r", 14)
+          .on("click", e => node_click(e.srcElement.__data__[name]))
+          .on("contextmenu", e => handle_right_click(e))
+          .call(drag(simulation))
+          .merge(node);
+
+      node.append("title")
+          .text( d => d[name] );
+    
+      // Update links
+      link = link.data(filteredLinks, d => d.source + "-" + d.target);
+      link.exit().remove();
+      link = link.enter()
+          .append("line")
+          .attr("class", "link")
+          .attr("marker-start", "url(#arrow)")
+          .merge(link);
+
+      // Update lables
+      text = text.data(nodesData, d => d.id);
+      text.exit().remove();
+      text = text.enter()
+          .append("text")
+          .attr("class", "label")
+          .attr("text-anchor", "middle")
+          .attr("dx", 0)
+          .attr("dy", 3.5)
+          .text(d => d[name].slice(0,2))
+          .merge(text);
+
+      d3.selectAll("circle")
+        .attr("fill", d => (selection.includes(d[name]))? anchor_color: color(equivilance(comparison, d['desc'])))
+
+      // Restart simulation
+      simulation.nodes(nodesData).on("tick", ticked);
+      simulation.force("link").links(filteredLinks).strength(d => (1-d.distance)/5);
+      simulation.alpha(1).restart();
+
+    }
+
+    function ticked() {
+        link.attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node.attr("cx", d => d.x)
+            .attr("cy", d => d.y);
+
+        text.attr("x", d => d.x)
+            .attr("y", d => d.y);
+    }
+
+    function drag(simulation) {
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            if(selection.includes(d[name])){
+              d.fx = event.x;
+              d.fy = event.y;
+            }else{
+              d.fx = null;
+              d.fy = null;
+            }
+        }
+
+        return d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended);      
+    }
+    // END updateGraph
+
+    // Initial render with no nodes selected
+    update_graph();
+
+    // api call that loads in all the nodes
+    async function load_data(url){
+      return await fetch(url)
+	                 .then((resp) => resp.json())
+                   .then((data) => update_nodes(data))
+	                 .catch((error) => console.log(error));
+    }
+
+    // api call to load keys potentially useful in the future for selecting the name column for the nodes
+    async function load_keys(){
+      return await fetch('http://127.0.0.1:8000/api/graph/keys/')
+                   .then((resp) => resp.json())
+                   .then((data) => update_keys(data))
+                   .catch((error) => console.log(error));
+    }
+    
+    // called by load_data ONLY
+    // loads new data into the node and link lists
+    // also removes data from them
+    function update_nodes(data){
+      if(data == null) return;
+
+      let nodes = JSON.parse(data.nodes);
+      let edges = JSON.parse(data.edges);
+      console.log("nodes: ", nodes, "edges: ", edges);
+
+      let unload = loaded;
+
+      nodes.forEach((node) => {            // check if the node is loaded already 
+        if(!loaded.includes(node[name])){  // if it is don't update it so d3 doesn't explode
+          nodesData.push(node);
+          loaded.push(node[name]);
+        }
+
+        unload = unload.filter(n => n != node[name]); // update the unload list 
+      });
+
+      nodesData.forEach((node) =>{                        // unload all of the nodes no longer in use
+        if(unload.includes(node[name])){                  // 
+          nodesData = nodesData.filter(n => n !== node);  //
+          loaded = loaded.filter(n => n !== node[name]);  //
+        }
+      });
+
+      linksData = edges;  // set the links
+      update_graph();
+    }
+
+    // updates the depth of the edge search
+    function update_depth(){
+      depth = document.getElementById("depth").value;
+
+      load_data(get_url());
+      update_graph();
+    }
+
+    // updates the edge weight threshold
+    function update_threshold(){
+      distance_threshold = document.getElementById("threshold").value;
+      update_graph();
+    }
+
+    // updates the selection of anchor nodes.
+    // it also manages the directions list.
+    function update_selection(){
+      let new_selection = document.getElementById('dx10').value;
+      new_selection = new_selection.split(",");
+      let diff = selection.length - new_selection.length
+
+      if(diff < 0){ // check if a node was added to the list
+        for(let i = 0, j = 0; diff != 0; i++, j++){
+          if(selection[i] == new_selection[j]){ continue; }
+          directions.splice(j, 0, 1);
+          diff++;
+          j++;
+        }
+      }else{ // check if a node was deleted from the list
+        for(let i = 0, j = 0; diff != 0; i++, j++){
+          if(selection[i] == new_selection[j]){ continue; }
+          directions.splice(j, 1);
+          diff--;
+          j--;
+        }
+      }
+      
+      selection = new_selection;
+
+      if(selection == ''){ // if the selection is empty re-initialize everything
+        loaded = [];
+        selection = [];
+        directions = [];
+        nodesData = [];
+        linksData = [];
+        update_graph(); // update the graph so everything disapears
+        return;
+      }
+
+      load_data(get_url());
+      update_graph();
+    }
+
+    // updates the color of the root nodes
+    function update_color(){
+      anchor_color = document.getElementById("anchor_color").value;
+      update_graph();
+    }
+
+    // updates the string to compare with on each node
+    function update_comparison(){
+      comparison = document.getElementById("comparison").value;
+      update_graph();
+    }
+
+    // node click handler for left click (makes the node an anchor node)
+    function node_click(name){
+      if(selection.includes(name)) return;
+
+      selection.push(name);
+      directions.push(1);
+      document.getElementById('dx10').value = selection.join(",");
+      
+      update_selection();
+    }
+
+    // ratio of the number of characters in the string that match in order
+    function equivilance(a, b){
+      const min_len = a.length < b.length ? a.length: b.length;
+      const max_len = a.length > b.length ? a.length: b.length;
+      let i = 0;
+
+      for(i = 0; i < min_len; i++){
+        if(a[i] !== b[i]){
+          break;
+        }
+      }
+
+      return (i/max_len);
+    }
+    
+    // builds the url to be sent to the api
+    function get_url(){ 
+	    let params = new URLSearchParams({codes: selection.join(","), depth: depth, directions: directions.join(",")});
+      let url = `${invokeURL}/api/graph?${params.toString()}`;
+      console.log(url);
+      return url;
+    }
+
+    // node click handler for right click
+    function handle_right_click(e){
+      if(drop_down.style.display == "block"){hide_menu(); return;}
+      clicked_node = e.srcElement.__data__; 
+      if(!selection.includes(clicked_node[name])) return;
+      e.preventDefault();
+
+      drop_down.style.left = e.pageX + "px"; // move the dropdown
+      drop_down.style.top = e.pageY + "px";  //
+      drop_down.style.display = "block";     // make it visible
+    }
+
+    // hides the right click menu
+    function hide_menu(){
+      drop_down.style.display = "none";
+    }
+
+    // sets to search for edges where this node is the source and target
+    function set_all_edges(){
+      let i = selection.indexOf(clicked_node[name]);
+      directions[i] = 0;
+      load_data(get_url());
+      update_graph();
+    }
+
+    // sets to search for edges where this node is the target
+    function set_in_edges(){
+      let i = selection.indexOf(clicked_node[name]);
+      directions[i] = 2;
+      load_data(get_url());
+      update_graph();
+    }
+
+    // sets to search for edges where this node is the source
+    function set_out_edges(){
+      let i = selection.indexOf(clicked_node[name]);
+      directions[i] = 1;
+      load_data(get_url());
+      update_graph();
+    }
+
+    function add_node(){
+
+    }
+
+    function del_node(){
+
+    }
+
+// this is a block of things that could be useful in the future
+/*
+https://observablehq.com/@mbostock/ramp
+function ramp(color, n = 512) {
+  const canvas = DOM.canvas(n, 1);
+  const context = canvas.getContext("2d");
+  canvas.style.margin = "0 -14px";
+  canvas.style.width = "calc(100% + 28px)";
+  canvas.style.height = "40px";
+  canvas.style.imageRendering = "-moz-crisp-edges";
+  canvas.style.imageRendering = "pixelated";
+  for (let i = 0; i < n; ++i) {
+    context.fillStyle = color(i / (n - 1));
+    context.fillRect(i, 0, 1, 1);
+  }
+  return canvas;
+}
+
+
+
+    function update_keys(data){
+      keys = data;
+      if(keys == null) return;
+
+      Object.keys(keys).forEach((key) =>{ 
+        let option = nodeOptions.append("div")
+          .text(key + ": ");
+
+        let selector = {};
+
+        switch(keys[key]["type"]){
+          case "int64": 
+            selector = option.append("select")
+                                 .attr("id", `${key}-op`)
+                                 .on("change", () => {update_path_params(key)});
+
+            selector.append("option")
+                    .attr("value", ">")
+                    .text(">");
+            selector.append("option")
+                    .attr("value", "=")
+                    .text("=");
+            selector.append("option")
+                    .attr("value", "<")
+                    .text("<");
+
+		        option.append("input")
+		          .attr("type", "number")
+              .attr("class", "number")
+              .attr("placeholder", "number")
+              .attr("min", keys[key]["min"])
+              .attr("max", keys[key]["max"])
+              .attr("id", key)
+              .on("change", () => {update_path_params(key)});
+
+            option.append("input")
+                  .attr("type", "radio")
+                  .attr("name", "isName")
+                  .attr("value", key);
+            break;
+
+          case "object":
+              selector = option.append("select")
+                                 .attr("id", `${key}-op`)
+                                 .on("change", () => {update_path_params(key)});
+            selector.append("option")
+                    .attr("value", ">")
+                    .text(">");
+            selector.append("option")
+                    .attr("value", "=")
+                    .text("=");
+            selector.append("option")
+                    .attr("value", "<")
+                    .text("<");
+
+		        option.append("input")
+		          .attr("type", "text")
+              .attr("class", "number")
+              .attr("placeholder", "text")
+              .attr("min", keys[key]["min"])
+              .attr("max", keys[key]["max"])
+              .attr("id", key)
+              .on("change", () => {update_path_params(key)});
+
+            option.append("input")
+                  .attr("type", "radio")
+                  .attr("name", "isName")
+                  .attr("value", key)
+                  .on("click", () => {update_name()});
+            break;
+        }
+        });
+      nodeOptions.append("input")
+                 .attr("id", "update_graph")
+                 .attr("type", "button")
+                 .attr("value", "update_graph")
+                 .on("click", () => {load_data(get_url())});
+    }
+*/
+    
+
+/*    function update_name(){
+      let radio_buttons = document.getElementsByName("isName");
+
+      for(const button of radio_buttons){
+        if(button.checked){
+          name = button.value;
+          break;
+        }
+      }
+      console.log("name: ", name);
+      update_nodes(null);
+    }
+
+    function update_path_params(key){
+      path_params[key] = {};
+      path_params[key]['val'] = document.getElementById(key).value;
+      path_params[key]['op'] = document.getElementById(`${key}-op`).value;
+      console.log(key, path_params);
+    }
+*/
+
+
+    </script>
+</body>
+</html>
+
