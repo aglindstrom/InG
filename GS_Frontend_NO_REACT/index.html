@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Force-Directed Graph with Node Selection</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-force-boundary@0.0.1/dist/d3-force-boundary.min.js"></script>
     <style>
         *{
 				  border: 0;
@@ -78,8 +79,8 @@
         }
 
         .text{
-          max-width: 90%;
-          min-width: 90%;
+          resize: vertical;
+          width: 90%;
           height: 50%;
           padding: 5px;
           border: 1px solid #000;
@@ -123,7 +124,7 @@
         <div id="node-options">
           <div>
             <label for="anchor_color">anchor color</label>
-            <input id="anchor_color" type="color" onchange="update_color()"/>
+            <input id="anchor_color" type="color" value="#ff00ff" onchange="update_color()"/>
           </div>
           <div>
             <label for="depth">depth</label>
@@ -142,7 +143,7 @@
           </div> -->
           <div>
             <label for="comparison">comparison string</label>
-            <textarea id="comparison" class="text" placeholder="comparison string" onchange="update_comparison()"></textarea>
+            <textarea id="comparison" class="text" placeholder="comparison string" onchange="update_comparison()" rows="20"></textarea>
           </div>
         </div>
       </div>
@@ -153,8 +154,10 @@
     document.onclick = hide_menu;
 
     // constants
-    const width = document.getElementById("graph").scrollWidth;   // working width and height for the simulation
-    const height = document.getElementById("graph").scrollHeight; //
+    const context = document.getElementById("graph");
+    const width = context.scrollWidth;   // working width and height for the simulation
+    const height = context.scrollHeight; //
+    const padding = 20;
     const drop_down = document.getElementById("drop-down");       // the dropdown menu for right click
     const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
     const invokeURL = "http://127.0.0.1:8000";                    // the address of the API
@@ -164,7 +167,7 @@
     let comparison = document.getElementById("comparison").value;         // initial comparison string = ''
     let name = 'dx10';                                                    // node name column. In the future a menu using the keys should be used to determin this
     let distance_threshold = document.getElementById("threshold").value;  // initial distance threshold
-    let anchor_color = '#000';                                            // initial anchor color
+    let anchor_color = document.getElementById("anchor_color").value;                                            // initial anchor color
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
     // graph data
@@ -178,17 +181,13 @@
     const svg = d3.select("#graph").append("svg")
         .attr("width", width)
         .attr("height", height)
-        .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .attr("viewBox", [-width/2, -height/2, width, height])
         .attr("style", "max-width: 100%; height: auto;");
 
     // Create force simulation
     const simulation = d3.forceSimulation()
         .force("link", d3.forceLink().id(d => d.id))
-        .force("charge", d3.forceManyBody().strength(-200))
-        .force("X", d3.forceX())
-        .force("Y", d3.forceY())
-        .force("sort_y+", d3.forceY())
-        .force("sort_y-", d3.forceY());
+        .force("charge", d3.forceManyBody().strength(-100));
 
     // make the arrow marker to indicate edge direction
     svg.append("defs")
@@ -258,7 +257,7 @@
           .merge(text);
 
       d3.selectAll("circle")
-        .attr("fill", d => (selection.includes(d[name]))? anchor_color: color(equivilance(comparison, d['desc'])))
+        .attr("fill", d => (selection.includes(d[name]))? anchor_color: color(1-equivilance(comparison, d['desc'])))
 
       // Restart simulation
       simulation.nodes(nodesData).on("tick", ticked);
@@ -268,16 +267,16 @@
     }
 
     function ticked() {
-        link.attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
+        link.attr("x1", d => clamp(d.source.x, width/2, padding))
+            .attr("y1", d => clamp(d.source.y, height/2, padding))
+            .attr("x2", d => clamp(d.target.x, width/2, padding))
+            .attr("y2", d => clamp(d.target.y, height/2, padding));
 
-        node.attr("cx", d => d.x)
-            .attr("cy", d => d.y);
+        node.attr("cx", d => clamp(d.x, width/2, padding))
+            .attr("cy", d => clamp(d.y, height/2, padding));
 
-        text.attr("x", d => d.x)
-            .attr("y", d => d.y);
+        text.attr("x", d => clamp(d.x, width/2, padding))
+            .attr("y", d => clamp(d.y, height/2, padding));
     }
 
     function drag(simulation) {
@@ -501,12 +500,8 @@
       update_graph();
     }
 
-    function add_node(){
-
-    }
-
-    function del_node(){
-
+    function clamp(val, bound, pad){
+      return ((val < bound-pad)? ((val > -bound+pad)? val : -bound+pad): bound-pad);
     }
 
 // this is a block of things that could be useful in the future
