@@ -78,8 +78,8 @@
         }
 
         .text{
-          max-width: 90%;
-          min-width: 90%;
+          resize: vertical;
+          width: 90%;
           height: 50%;
           padding: 5px;
           border: 1px solid #000;
@@ -117,13 +117,15 @@
       <div onclick="set_in_edges()"> edges-in </div>
       <div onclick="set_out_edges()"> edges-out </div>
       <div onclick="set_all_edges()"> edges-all </div>
+      <div onclick="unpin()"> unpin </div>
+      <div onclick="pin()"> pin </div>
     </div>
     <div class="app-container">
       <div class="node-list-menu">
         <div id="node-options">
           <div>
             <label for="anchor_color">anchor color</label>
-            <input id="anchor_color" type="color" onchange="update_color()"/>
+            <input id="anchor_color" type="color" value="#000000" onchange="update_color()"/>
           </div>
           <div>
             <label for="depth">depth</label>
@@ -133,6 +135,32 @@
             <label for="threshold">threshold</label>
             <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
           </div>
+          <div>
+            <label for="scale">scale</label>
+            <input id="scale" class="number" type="number" min="0" value="1" step="1" onchange="update_scale()"/>
+          </div>
+          <fieldset>
+            <legend>Coloring</legend>
+          <div>
+            <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
+            <label for="ratio">ratio</label>
+          </div>
+          <div>
+            <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
+            <label for="cossim">cossim</label>
+          </div>
+          </fieldset>
+          <fieldset>
+            <legend>Labeling</legend>
+          <div>
+            <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
+            <label for="text">DX10</label>
+          </div>
+          <div>
+            <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
+            <label for="similarity">similarity</label>
+          </div>
+          </fieldset>
           <div>  
             <label for="dx10">selection</label>
             <textarea id="dx10" class="text" placeholder="dx10 codes" onchange="update_selection()"></textarea>
@@ -142,7 +170,7 @@
           </div> -->
           <div>
             <label for="comparison">comparison string</label>
-            <textarea id="comparison" class="text" placeholder="comparison string" onchange="update_comparison()"></textarea>
+            <textarea id="comparison" class="text" placeholder="comparison string" value="Certain infectious and parasitic diseases (A00-B99)" onchange="update_comparison()" rows="10"></textarea>
           </div>
         </div>
       </div>
@@ -153,8 +181,10 @@
     document.onclick = hide_menu;
 
     // constants
-    const width = document.getElementById("graph").scrollWidth;   // working width and height for the simulation
-    const height = document.getElementById("graph").scrollHeight; //
+    const context = document.getElementById("graph");
+    const width = context.scrollWidth;   // working width and height for the simulation
+    const height = context.scrollHeight; //
+    const padding = 20;
     const drop_down = document.getElementById("drop-down");       // the dropdown menu for right click
     const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
     const invokeURL = "http://127.0.0.1:8000";                    // the address of the API
@@ -164,7 +194,10 @@
     let comparison = document.getElementById("comparison").value;         // initial comparison string = ''
     let name = 'dx10';                                                    // node name column. In the future a menu using the keys should be used to determin this
     let distance_threshold = document.getElementById("threshold").value;  // initial distance threshold
-    let anchor_color = '#000';                                            // initial anchor color
+    let anchor_color = document.getElementById("anchor_color").value;     // initial anchor color
+    let scale = document.getElementById("scale").value;
+    let coloring = 0;
+    let labeling = 0;
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
     // graph data
@@ -178,17 +211,15 @@
     const svg = d3.select("#graph").append("svg")
         .attr("width", width)
         .attr("height", height)
-        .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .attr("viewBox", [-width/2, -height/2, width, height])
         .attr("style", "max-width: 100%; height: auto;");
 
     // Create force simulation
     const simulation = d3.forceSimulation()
         .force("link", d3.forceLink().id(d => d.id))
-        .force("charge", d3.forceManyBody().strength(-200))
-        .force("X", d3.forceX())
-        .force("Y", d3.forceY())
-        .force("sort_y+", d3.forceY())
-        .force("sort_y-", d3.forceY());
+        .force("charge", d3.forceManyBody().strength(-150))
+        .force("y_sort-", d3.forceY(-height/2).strength(d => .05*d.equiv))
+        .force("y_sort+", d3.forceY(height/2).strength(d => .05*(1-d.equiv)))
 
     // make the arrow marker to indicate edge direction
     svg.append("defs")
@@ -225,9 +256,12 @@
       node = node.data(nodesData, d => d.id);
       node.exit().remove();
       node = node.enter()
-          .append("circle")
+          .append("rect")
           .attr("class", "node")
-          .attr("r", 14)
+          .attr("height", 14)
+          .attr("width", 60)
+          .attr("rx", 4)
+          
           .on("click", e => node_click(e.srcElement.__data__[name]))
           .on("contextmenu", e => handle_right_click(e))
           .call(drag(simulation))
@@ -235,6 +269,9 @@
 
       node.append("title")
           .text( d => d[name] );
+
+      d3.selectAll("rect").attr("fill", d => { d.equiv = similarity(d);
+            return (selection.includes(d[name]))? anchor_color: color((1-d.equiv)*scale);});
     
       // Update links
       link = link.data(filteredLinks, d => d.source + "-" + d.target);
@@ -254,11 +291,10 @@
           .attr("text-anchor", "middle")
           .attr("dx", 0)
           .attr("dy", 3.5)
-          .text(d => d[name].slice(0,2))
           .merge(text);
-
-      d3.selectAll("circle")
-        .attr("fill", d => (selection.includes(d[name]))? anchor_color: color(equivilance(comparison, d['desc'])))
+      text.text(d => get_label(d).slice(0,7));
+      
+      
 
       // Restart simulation
       simulation.nodes(nodesData).on("tick", ticked);
@@ -268,35 +304,35 @@
     }
 
     function ticked() {
-        link.attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
+        link.attr("x1", d => clamp(d.source.x, width/2, padding))
+            .attr("y1", d => clamp(d.source.y, height/2, padding))
+            .attr("x2", d => clamp(d.target.x, width/2, padding))
+            .attr("y2", d => clamp(d.target.y, height/2, padding));
 
-        node.attr("cx", d => d.x)
-            .attr("cy", d => d.y);
+        node.attr("x", d => clamp(d.x, width/2, padding)-30)
+            .attr("y", d => clamp(d.y, height/2, padding)-7);
 
-        text.attr("x", d => d.x)
-            .attr("y", d => d.y);
+        text.attr("x", d => clamp(d.x, width/2, padding))
+            .attr("y", d => clamp(d.y, height/2, padding));
     }
 
     function drag(simulation) {
         function dragstarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = event.x;
-            d.fy = event.y;
+            d.fx = clamp(event.x, width/2, padding);
+            d.fy = clamp(event.y, height/2, padding);
         }
 
         function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
+            d.fx = clamp(event.x, width/2, padding);
+            d.fy = clamp(event.y, height/2, padding);
         }
 
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
             if(selection.includes(d[name])){
-              d.fx = event.x;
-              d.fy = event.y;
+              d.fx = clamp(event.x, width/2, padding);
+              d.fy = clamp(event.y, height/2, padding);
             }else{
               d.fx = null;
               d.fy = null;
@@ -311,7 +347,7 @@
     // END updateGraph
 
     // Initial render with no nodes selected
-    update_graph();
+    // update_graph();
 
     // api call that loads in all the nodes
     async function load_data(url){
@@ -345,7 +381,13 @@
         if(!loaded.includes(node[name])){  // if it is don't update it so d3 doesn't explode
           nodesData.push(node);
           loaded.push(node[name]);
+        }else{
+          let a = nodesData.filter(n => n[name] == node[name]);
+
+          a['similarity'] = node['similarity']
         }
+
+        
 
         unload = unload.filter(n => n != node[name]); // update the unload list 
       });
@@ -375,23 +417,39 @@
       update_graph();
     }
 
+    function update_scale(){
+      scale = document.getElementById("scale").value;
+      update_graph();
+    }
+
     // updates the selection of anchor nodes.
     // it also manages the directions list.
     function update_selection(){
       let new_selection = document.getElementById('dx10').value;
       new_selection = new_selection.split(",");
-      let diff = selection.length - new_selection.length
 
+      for(const node in new_selection){
+        node.trim();
+      }
+
+      let diff = selection.length - new_selection.length
+      
+      // BUG HERE maybe?
+      console.log("selection: ", selection, "new_selection: ", new_selection);
+      
       if(diff < 0){ // check if a node was added to the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
-          if(selection[i] == new_selection[j]){ continue; }
+          if(selection[i] ?? '' == new_selection[j]){ continue; }
+          console.log("diff: ", diff);
           directions.splice(j, 0, 1);
           diff++;
           j++;
         }
+        console.log("diff: ", diff)
       }else{ // check if a node was deleted from the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
-          if(selection[i] == new_selection[j]){ continue; }
+          if(selection[i] == new_selection[j] ?? ''){ continue; }
+          console.log("diff: ", diff);
           directions.splice(j, 1);
           diff--;
           j--;
@@ -399,8 +457,9 @@
       }
       
       selection = new_selection;
+      console.log("selection: ", selection, "new_selection: ", new_selection);
 
-      if(selection == ''){ // if the selection is empty re-initialize everything
+      if(selection == []){ // if the selection is empty re-initialize everything
         loaded = [];
         selection = [];
         directions = [];
@@ -420,10 +479,40 @@
       update_graph();
     }
 
+    function update_coloring(mode){
+      coloring = mode;
+      update_graph();
+    }
+
+    function update_labeling(mode){
+      labeling = mode;
+      update_graph();
+    }
+
+    function get_label(node){
+      return labeling == 0? node['dx10'] : Number.parseFloat(node['equiv']).toFixed(4);
+    }
+
     // updates the string to compare with on each node
     function update_comparison(){
       comparison = document.getElementById("comparison").value;
+      update_embedding_string();
+
+      if(coloring == 1){
+        update_nodes(get_url());
+      }
       update_graph();
+    }
+
+    function update_embedding_string(){
+      let url = `${invokeURL}/api/embed`;
+      const request = new Request(url, {
+          headers: {'accept': 'application/json', 'Content-Type': 'application/json'},
+          method:"POST", 
+          body: JSON.stringify({"prompt": comparison}),
+        });
+
+      const post = fetch(request).then((resp) => resp.json() ).then((json) => console.error(json.detail));
     }
 
     // node click handler for left click (makes the node an anchor node)
@@ -438,7 +527,15 @@
     }
 
     // ratio of the number of characters in the string that match in order
-    function equivilance(a, b){
+    function similarity(node){
+      return coloring == 0? string_ratio(comparison, node['desc']): cosine_similarity(node);
+    }
+
+    function cosine_similarity(node){
+      return node['similarity'] ?? 0.0;
+    }
+    
+    function string_ratio(a, b){
       const min_len = a.length < b.length ? a.length: b.length;
       const max_len = a.length > b.length ? a.length: b.length;
       let i = 0;
@@ -451,7 +548,7 @@
 
       return (i/max_len);
     }
-    
+
     // builds the url to be sent to the api
     function get_url(){ 
 	    let params = new URLSearchParams({codes: selection.join(","), depth: depth, directions: directions.join(",")});
@@ -467,8 +564,15 @@
       if(!selection.includes(clicked_node[name])) return;
       e.preventDefault();
 
-      drop_down.style.left = e.pageX + "px"; // move the dropdown
-      drop_down.style.top = e.pageY + "px";  //
+      if(e.pageY < height/2){
+        drop_down.style.top = e.pageY + "px";
+        drop_down.style.bottom = null;
+      }else{
+        drop_down.style.bottom = (height - e.pageY) + "px";
+        drop_down.style.top = null;
+      }
+
+      drop_down.style.left = e.pageX + "px"; // move the dropdown   
       drop_down.style.display = "block";     // make it visible
     }
 
@@ -501,12 +605,18 @@
       update_graph();
     }
 
-    function add_node(){
-
+    function clamp(val, bound, pad){
+      return ((val < bound-pad)? ((val > -bound+pad)? val : -bound+pad): bound-pad);
     }
 
-    function del_node(){
+    function unpin(){
+      clicked_node['fx'] = null;
+      clicked_node['fy'] = null;
+    }
 
+    function pin(){
+      clicked_node['fx'] = clicked_node['x'];
+      clicked_node['fy'] = clicked_node['y'];
     }
 
 // this is a block of things that could be useful in the future
