@@ -1,5 +1,4 @@
 __*__
-*.pyc
-*.csv
 
+*.csv
 *.shelve*
