@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Force-Directed Graph with Node Selection</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./history.js"></script>
     <style>
         *{
 				  border: 0;
@@ -71,6 +72,14 @@
           background-color: #eee;
         }
 
+        #state_stack{
+          background-color: #fff;
+          height: 10em;
+          width: 93%;
+          overflow-y: scroll;
+          border: 1px solid #000;
+        }
+
         .number{
           width: 25%;
           padding: 5px;
@@ -98,8 +107,8 @@
         }
 
         .link {
-          stroke: #999;
-          stroke-opacity: 0.6;
+          stroke-width: .125em;
+          stroke-opacity: 1.0;
         }
 
         .label{
@@ -117,8 +126,8 @@
       <div onclick="set_in_edges()"> edges-in </div>
       <div onclick="set_out_edges()"> edges-out </div>
       <div onclick="set_all_edges()"> edges-all </div>
-      <div onclick="unpin()"> unpin </div>
-      <div onclick="pin()"> pin </div>
+      <div onclick="unpin(clicked_node)"> unpin </div>
+      <div onclick="pin(clicked_node)"> pin </div>
     </div>
     <div class="app-container">
       <div class="node-list-menu">
@@ -129,7 +138,7 @@
           </div>
           <div>
             <label for="depth">depth</label>
-            <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url());"/>
+            <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
           </div>
           <div>
             <label for="threshold">threshold</label>
@@ -165,12 +174,14 @@
             <label for="dx10">selection</label>
             <textarea id="dx10" class="text" placeholder="dx10 codes" onchange="update_selection()"></textarea>
           </div>
-    <!--  <div>
-            <input id="update_graph" type="button" value="Add Anchor" onclick="load_data(get_url())"/>
-          </div> -->
           <div>
             <label for="comparison">comparison string</label>
             <textarea id="comparison" class="text" placeholder="comparison string" value="Certain infectious and parasitic diseases (A00-B99)" onchange="update_comparison()" rows="10"></textarea>
+          </div>
+          <div>
+            state stack
+            <div id = "state_stack">
+            </div>
           </div>
         </div>
       </div>
@@ -187,7 +198,8 @@
     const padding = 20;
     const drop_down = document.getElementById("drop-down");       // the dropdown menu for right click
     const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
-    const invokeURL = "http://127.0.0.1:8000";                    // the address of the API
+    const link_color = d3.scaleSequential(d3.schemeSet1);        // node colors for comparison string
+    let invokeURL = "http://127.0.0.1";                    // the address of the API
     
     // initial values
     let depth = document.getElementById("depth").value;                   // initial depth = 1
@@ -200,12 +212,17 @@
     let labeling = 0;
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
+    let links = {};
+
     // graph data
     let loaded = [];      // list of node names that are currently loaded 
     let selection = [];   // list of selected node (anchor) names
     let directions = [];  // list of selected node search directions (0 = Both directions, 1 = edges where this node is the source, 2 = edges where this node is the target)
-    let nodesData = [];   // all the nodes
-    let linksData = [];   // all the edges
+    let node_data = [];   // all the nodes
+    let link_data = {};   // all the links
+
+    const init_state = get_state();
+    state_push(init_state, "INITIALIZE");
 
     // Create SVG
     const svg = d3.select("#graph").append("svg")
@@ -216,7 +233,7 @@
 
     // Create force simulation
     const simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().id(d => d.id))
+        .force("link", d3.forceLink().id(d => d[name]))
         .force("charge", d3.forceManyBody().strength(-150))
         .force("y_sort-", d3.forceY(-height/2).strength(d => .05*d.equiv))
         .force("y_sort+", d3.forceY(height/2).strength(d => .05*(1-d.equiv)))
@@ -228,8 +245,8 @@
        .attr("viewBox", [0, 0, 10, 10])
        .attr("refX", -40)
        .attr("refY", 5)
-       .attr("markerWidth", 6)
-       .attr("markerHeight", 6)
+       .attr("markerWidth", 4)
+       .attr("markerHeight", 4)
        .attr("orient", "auto")
        .append("path")
        .attr("cx", 0)
@@ -242,18 +259,22 @@
     let node = svg.append("g").selectAll(".node");
     let text = svg.append("g").selectAll(".label");
 
-
     //
     // updateGraph this is the d3 rendering and simulation part 
     //
     function update_graph() {
       // Filter nodes and links based on selectedNodeIds
-      let filteredLinks = linksData.filter(d => (1-d.distance) > distance_threshold);
-      
-      window.parent.postMessage({"nodes": nodesData, "links": filteredLinks});
+      if(!node_data) return;
+
+      let filtered_links = [];
+      for(const group in link_data){
+        filtered_links.push(link_data[group]);
+      }
+      filtered_links = filtered_links.flat();
+      filtered_links = filtered_links.filter(d => (d.perplexity) > distance_threshold);
 
       // Update nodes
-      node = node.data(nodesData, d => d.id);
+      node = node.data(node_data, d => d[name]);
       node.exit().remove();
       node = node.enter()
           .append("rect")
@@ -261,7 +282,6 @@
           .attr("height", 14)
           .attr("width", 60)
           .attr("rx", 4)
-          
           .on("click", e => node_click(e.srcElement.__data__[name]))
           .on("contextmenu", e => handle_right_click(e))
           .call(drag(simulation))
@@ -270,20 +290,24 @@
       node.append("title")
           .text( d => d[name] );
 
-      d3.selectAll("rect").attr("fill", d => { d.equiv = similarity(d);
+      d3.selectAll("rect").attr("fill", d => { d.equiv = .5; //similarity(d);
             return (selection.includes(d[name]))? anchor_color: color((1-d.equiv)*scale);});
     
       // Update links
-      link = link.data(filteredLinks, d => d.source + "-" + d.target);
+      link = link.data(filtered_links, d => d.source[name] + "-" + d.target[name]);
       link.exit().remove();
       link = link.enter()
           .append("line")
           .attr("class", "link")
           .attr("marker-start", "url(#arrow)")
+          .attr("stroke", d => link_color(d.group))
           .merge(link);
 
+      link.append("title")
+          .text(d => `group: ${d.group}`);
+
       // Update lables
-      text = text.data(nodesData, d => d.id);
+      text = text.data(node_data, d => d[name]);
       text.exit().remove();
       text = text.enter()
           .append("text")
@@ -294,11 +318,11 @@
           .merge(text);
       text.text(d => get_label(d).slice(0,7));
       
-      
+      let max_perplexity = filtered_links.reduce((acc, link) => acc > link.perplexity? acc: link.perplexity, 0)
 
       // Restart simulation
-      simulation.nodes(nodesData).on("tick", ticked);
-      simulation.force("link").links(filteredLinks).strength(d => (1-d.distance)/5);
+      simulation.nodes(node_data).on("tick", ticked);
+      simulation.force("link").links(filtered_links).strength(.1); //d => .3/(d.perplexity > 30 ? 30 : d.perplexity));
       simulation.alpha(1).restart();
 
     }
@@ -331,8 +355,7 @@
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
             if(selection.includes(d[name])){
-              d.fx = clamp(event.x, width/2, padding);
-              d.fy = clamp(event.y, height/2, padding);
+              pin(d);
             }else{
               d.fx = null;
               d.fy = null;
@@ -350,11 +373,11 @@
     // update_graph();
 
     // api call that loads in all the nodes
-    async function load_data(url){
+    async function load_data(url, source){
       return await fetch(url)
 	                 .then((resp) => resp.json())
-                   .then((data) => update_nodes(data))
-	                 .catch((error) => console.log(error));
+                   .then((data) => update_nodes(data, source))
+	                 .catch((error) => console.error(error));
     }
 
     // api call to load keys potentially useful in the future for selecting the name column for the nodes
@@ -362,130 +385,161 @@
       return await fetch('http://127.0.0.1:8000/api/graph/keys/')
                    .then((resp) => resp.json())
                    .then((data) => update_keys(data))
-                   .catch((error) => console.log(error));
+                   .catch((error) => console.error(error));
     }
     
     // called by load_data ONLY
     // loads new data into the node and link lists
     // also removes data from them
-    function update_nodes(data){
+    function update_nodes(data, source){
       if(data == null) return;
 
       let nodes = JSON.parse(data.nodes);
       let edges = JSON.parse(data.edges);
-      console.log("nodes: ", nodes, "edges: ", edges);
-
-      let unload = loaded;
 
       nodes.forEach((node) => {            // check if the node is loaded already 
         if(!loaded.includes(node[name])){  // if it is don't update it so d3 doesn't explode
-          nodesData.push(node);
+          node_data.push(node);
           loaded.push(node[name]);
         }else{
-          let a = nodesData.filter(n => n[name] == node[name]);
-
-          a['similarity'] = node['similarity']
-        }
-
-        
-
-        unload = unload.filter(n => n != node[name]); // update the unload list 
-      });
-
-      nodesData.forEach((node) =>{                        // unload all of the nodes no longer in use
-        if(unload.includes(node[name])){                  // 
-          nodesData = nodesData.filter(n => n !== node);  //
-          loaded = loaded.filter(n => n !== node[name]);  //
+          let a = node_data.filter(n => n[name] == node[name]);
+          a['similarity'] = node['similarity'];
         }
       });
 
-      linksData = edges;  // set the links
+      edges.forEach((edge) => {
+        if(edge['group']) return;
+        edge['group'] = source;
+      });
+
+      // prune unused nodes
+      node_data.map((node) => edges.filter((e) => e.source == node[name] || e.target == node[name])?node:undefined);
+      node_data.flat();
+
+      links[`group_${source}`] = JSON.parse(JSON.stringify(edges)); // keep a copy of the links
+      link_data[`group_${source}`] = edges;                         // set the link data
+
       update_graph();
+    }
+
+    function unload_nodes(){
+      let link_ids = [];
+      let keep = [];
+
+      for(const group in link_data){
+        link_ids.push(link_data[group]);
+      }
+
+      link_ids = link_ids.flat();
+      link_ids = link_ids.map((link) => [link.source.id ?? link.source, link.target.id ?? link.target]);
+      link_ids = link_ids.flat();
+
+      console.log("before: ", node_data);
+      node_data = node_data.filter((node) => link_ids.includes(node));
+      console.log("after : ", node_data);
     }
 
     // updates the depth of the edge search
     function update_depth(){
       depth = document.getElementById("depth").value;
 
-      load_data(get_url());
+      load_data(get_url(8000), 0);
+      load_data(get_url(8001), 1);
+
+      state_push(get_state(), "UPDATE DEPTH");
       update_graph();
     }
 
     // updates the edge weight threshold
     function update_threshold(){
       distance_threshold = document.getElementById("threshold").value;
+
+      state_push(get_state(), "UPDATE THRESHOLD");
       update_graph();
     }
 
     function update_scale(){
       scale = document.getElementById("scale").value;
+
+      state_push(get_state(), "UPDATE SCALE");
       update_graph();
     }
 
     // updates the selection of anchor nodes.
     // it also manages the directions list.
     function update_selection(){
+
       let new_selection = document.getElementById('dx10').value;
       new_selection = new_selection.split(",");
-
-      for(const node in new_selection){
-        node.trim();
+      if(new_selection == []){ // if the selection is empty re-initialize everything
+        loaded = [];
+        selection = [];
+        directions = [];
+        node_data = [];
+        link_data = [];
+        
+        state_push(get_state(), "UPDATE SELECTION");
+        update_graph(); // update the graph so everything disapears
+        return;
       }
+      
+      new_selection = new_selection.map((id) => id.trim().padEnd(4,'-'));
 
-      let diff = selection.length - new_selection.length
+      document.getElementById('dx10').value = new_selection;
+
+      let diff = selection.length - new_selection.length;
       
       // BUG HERE maybe?
-      console.log("selection: ", selection, "new_selection: ", new_selection);
       
       if(diff < 0){ // check if a node was added to the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
           if(selection[i] ?? '' == new_selection[j]){ continue; }
-          console.log("diff: ", diff);
           directions.splice(j, 0, 1);
           diff++;
           j++;
         }
-        console.log("diff: ", diff)
       }else{ // check if a node was deleted from the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
           if(selection[i] == new_selection[j] ?? ''){ continue; }
-          console.log("diff: ", diff);
           directions.splice(j, 1);
           diff--;
           j--;
         }
       }
       
-      selection = new_selection;
-      console.log("selection: ", selection, "new_selection: ", new_selection);
+      selection = new_selection;  
 
-      if(selection == []){ // if the selection is empty re-initialize everything
-        loaded = [];
-        selection = [];
-        directions = [];
-        nodesData = [];
-        linksData = [];
-        update_graph(); // update the graph so everything disapears
-        return;
-      }
 
-      load_data(get_url());
-      update_graph();
+      let fetch1 = load_data(get_url(8000), 0);
+      let fetch2 = load_data(get_url(8001), 1)
+        
+      Promise.all([fetch1, fetch2]).then(() => {
+          state_push(get_state(), "UPDATE SELECTION");
+          unload_nodes();
+          update_graph();
+
+        });
     }
 
     // updates the color of the root nodes
     function update_color(){
       anchor_color = document.getElementById("anchor_color").value;
+
+      state_push(get_state(), "UPDATE COLOR");
       update_graph();
     }
 
     function update_coloring(mode){
       coloring = mode;
+
+      state_push(get_state(), "UPDATE COLORING");
       update_graph();
     }
 
     function update_labeling(mode){
       labeling = mode;
+
+      state_push(get_state(), "UPDATE COMPARISON");
       update_graph();
     }
 
@@ -499,8 +553,10 @@
       update_embedding_string();
 
       if(coloring == 1){
-        update_nodes(get_url());
+        update_nodes(get_url(8000));
       }
+
+      state_push(get_state(), "UPDATE COMPARISON");
       update_graph();
     }
 
@@ -536,6 +592,9 @@
     }
     
     function string_ratio(a, b){
+      return 0;
+      if(!a.length || !b.length) return 0;
+
       const min_len = a.length < b.length ? a.length: b.length;
       const max_len = a.length > b.length ? a.length: b.length;
       let i = 0;
@@ -550,10 +609,9 @@
     }
 
     // builds the url to be sent to the api
-    function get_url(){ 
+    function get_url(port){ 
 	    let params = new URLSearchParams({codes: selection.join(","), depth: depth, directions: directions.join(",")});
-      let url = `${invokeURL}/api/graph?${params.toString()}`;
-      console.log(url);
+      let url = `${invokeURL}:${port}/api/graph?${params.toString()}`;
       return url;
     }
 
@@ -585,7 +643,10 @@
     function set_all_edges(){
       let i = selection.indexOf(clicked_node[name]);
       directions[i] = 0;
-      load_data(get_url());
+      load_data(get_url(8000), 0);
+      load_data(get_url(8001), 1);
+
+      state_push(get_state(), `SET ALL EDGES: ${clicked_node[name]}`);
       update_graph();
     }
 
@@ -593,7 +654,10 @@
     function set_in_edges(){
       let i = selection.indexOf(clicked_node[name]);
       directions[i] = 2;
-      load_data(get_url());
+      load_data(get_url(8000), 0);
+      load_data(get_url(8001), 1);
+
+      state_push(get_state(), `SET IN EDGES: ${clicked_node[name]}`);
       update_graph();
     }
 
@@ -601,7 +665,10 @@
     function set_out_edges(){
       let i = selection.indexOf(clicked_node[name]);
       directions[i] = 1;
-      load_data(get_url());
+      load_data(get_url(8000), 0);
+      load_data(get_url(8001), 1);
+
+      state_push(get_state(), `SET OUT EDGES: ${clicked_node[name]}`);
       update_graph();
     }
 
@@ -609,15 +676,78 @@
       return ((val < bound-pad)? ((val > -bound+pad)? val : -bound+pad): bound-pad);
     }
 
-    function unpin(){
-      clicked_node['fx'] = null;
-      clicked_node['fy'] = null;
+    function unpin(node){
+      if(!node['pinned']) return;
+      node['fx'] = null;
+      node['fy'] = null;
+      node['pinned'] = false;
+      state_push(get_state(), `UNPIN: ${node[name]}`);
     }
 
-    function pin(){
-      clicked_node['fx'] = clicked_node['x'];
-      clicked_node['fy'] = clicked_node['y'];
+    function pin(node){
+      if(node['pinned']) return;
+      node['fx'] = node['x'];
+      node['fy'] = node['y'];
+      node['pinned'] = true;
+      state_push(get_state(), `PIN: ${node[name]}`);
     }
+
+    function get_state(){
+      const state = {
+        "links": links,
+        "loaded": loaded,
+        "selection": selection,
+        "directions": directions,
+        "node_data": node_data,
+        "depth": depth,
+        "comparison": comparison,
+        "name": name,
+        "distance_threshold": distance_threshold,
+        "anchor_color": anchor_color,
+        "scale": scale,
+        "coloring": coloring,
+        "labeling": labeling,
+        "clicked_node": clicked_node
+      };
+      return JSON.stringify(state);
+    }
+    
+    function set_state(state){
+      loaded = state.loaded;
+      selection = state.selection;
+      directions = state.directions;
+      node_data = state.node_data;
+      link_data = state.links;
+      depth = state.depth;
+      comparison = state.comparison;
+      name = state.name;
+      distance_threshold = state.distance_threshold;
+      anchor_color = state.anchor_color;
+      scale = state.scale;
+      coloring = state.coloring;
+      labeling = state.labeling;
+      clicked_node = state.clicked_node;
+
+      document.getElementById('dx10').value = selection;
+      document.getElementById('depth').value = depth;
+      document.getElementById('comparison').value = comparison;
+      document.getElementById('threshold').value = distance_threshold;
+      document.getElementById('anchor_color').value = anchor_color;
+      document.getElementById('scale').value = scale;
+      update_graph();
+    }
+
+/*
+    let depth = document.getElementById("depth").value;                   // initial depth = 1
+    let comparison = document.getElementById("comparison").value;         // initial comparison string = ''
+    let name = 'dx10';                                                    // node name column. In the future a menu using the keys should be used to determin this
+    let distance_threshold = document.getElementById("threshold").value;  // initial distance threshold
+    let anchor_color = document.getElementById("anchor_color").value;     // initial anchor color
+    let scale = document.getElementById("scale").value;
+    let coloring = 0;
+    let labeling = 0;
+    let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
+*/
 
 // this is a block of things that could be useful in the future
 /*
@@ -715,7 +845,7 @@ function ramp(color, n = 512) {
                  .attr("id", "update_graph")
                  .attr("type", "button")
                  .attr("value", "update_graph")
-                 .on("click", () => {load_data(get_url())});
+                 .on("click", () => {load_data(get_url(8000), 0)});
     }
 */
     

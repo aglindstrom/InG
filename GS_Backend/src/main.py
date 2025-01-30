@@ -11,8 +11,6 @@ import numpy as np
 import functools
 import logging
 import asyncio
-import json
-import re
 import os
 
 class Message(BaseModel):
@@ -23,7 +21,9 @@ logger = logging.getLogger('uvicorn.error')
 app.embed_vector = [0.0]*64
 app.embed_vector[0] = 1.0
 app.embed_string = ""
-
+app.node_file = os.environ['ING_NODES']
+app.edge_file = os.environ['ING_EDGES']
+app.name = os.environ['ING_NAMES']
 
 origins = [
     "http://localhost:3000",
@@ -42,18 +42,16 @@ app.add_middleware(
 
 @functools.cache
 def load_nodes():
-    nodes = pd.read_csv("data/Medical-Codes.node.csv") 
-    nodes = nodes.drop(columns=["x", "y"])
-    nodes = nodes.reset_index()
-    nodes = nodes.rename(columns={"index":"id"})
-
+    logger.info(app.node_file)
+    nodes = pd.read_csv(app.node_file, compression='gzip')
     return nodes
 
 @functools.cache
 def load_edges():
-    edges = pd.read_csv("data/Medical-Codes.edge.csv")
-    edges = edges.rename(columns={"src":"source", "tgt":"target"})
-    
+    logger.info(app.edge_file)
+    edges = pd.read_csv(app.edge_file, compression='gzip')
+    edges = edges.rename(columns={"DX1":"source", "DX2":"target"})
+    logger.info(edges)
     return edges
 
 @functools.cache
@@ -107,7 +105,7 @@ async def get_graph_by_nodes(codes:str="A", depth:int = 0, directions:str = "0")
 
     for code in code_list:
         code = code.strip()
-        node = graph_nodes.loc[graph_nodes['dx10'] == code]
+        node = graph_nodes.loc[graph_nodes[app.name] == code]
         anchors = pd.concat([anchors, node])
 
     if type(anchors) == type(None):
@@ -120,22 +118,23 @@ async def get_graph_by_nodes(codes:str="A", depth:int = 0, directions:str = "0")
 
     for anchor in anchors.iterrows():
         if str(directions_list[idx]) == "1" or str(directions_list[idx]) == "0":
-            edges = pd.concat([edges, get_edges(anchor[1]['id'], 'source', 'target', depth-1)])
+            edges = pd.concat([edges, get_edges(anchor[1][app.name], 'source', 'target', depth-1)])
         if str(directions_list[idx]) == "2" or str(directions_list[idx]) == "0":
-            edges = pd.concat([edges, get_edges(anchor[1]['id'], 'target', 'source', depth-1)])
+            edges = pd.concat([edges, get_edges(anchor[1][app.name], 'target', 'source', depth-1)])
         idx += 1
 
-    if edges.empty:
+    if type(edges) == type(None):
         return {"nodes":anchors.to_json(orient='records'), "edges": "[]"}
 
     for edge in edges.iterrows():
-        nodes = pd.concat([nodes, graph_nodes.loc[graph_nodes['id'] == edge[1]['source']]])
-        nodes = pd.concat([nodes, graph_nodes.loc[graph_nodes['id'] == edge[1]['target']]])
+        nodes = pd.concat([nodes, graph_nodes.loc[graph_nodes[app.name] == edge[1]['source']]])
+        nodes = pd.concat([nodes, graph_nodes.loc[graph_nodes[app.name] == edge[1]['target']]])
 
     edges = edges.drop_duplicates()            
     edges = edges.sort_values('source')
+
     nodes = nodes.drop_duplicates()
-    nodes = nodes.sort_values('id')
+    nodes = nodes.sort_values(app.name)
 
     try:
         # generate cosine similarities
@@ -179,8 +178,10 @@ async def get_arrays(array):
 @app.get("/api/node_embedding")
 async def get_node_embedding(code:str):
     nodes = load_nodes()
-    node = nodes.loc[nodes['dx10'] == code]
+    node = nodes.loc[nodes[app.name] == code]
     return node['embd']
+
+
 
 ########### embd_{dumps, loads} #############
 
@@ -195,6 +196,8 @@ def embd_loads(s: str) -> auto.np.ndarray:
     v = auto.np.frombuffer(b, dtype='f2')
     v = v.astype('f4')
     return v
+
+
 
 ############ LLM API #############
 
