@@ -33,6 +33,7 @@ function update_state_stack_element(){
 
 function state_make_element(display){
     let div = document.createElement("div");
+    div.classList.add("montserrat-body")
     let content = document.createTextNode(display);
     div.appendChild(content);
     div.addEventListener("click", (e) => state_element_handle_click(e));
