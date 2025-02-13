@@ -17,22 +17,22 @@
 </head>
 <body>
     <div id="drop-down" class="drop-down">
-      <div class="drop_down_option" onclick="set_in_edges()"> edges-in </div>
-      <div class="drop_down_option" onclick="set_out_edges()"> edges-out </div>
-      <div class="drop_down_option" onclick="set_all_edges()"> edges-all </div>
-      <div class="drop_down_option" onclick="unpin(clicked_node)"> unpin </div>
-      <div class="drop_down_option" onclick="pin(clicked_node)"> pin </div>
-      <div class="drop_down_option" onclick="request_node_description(clicked_node[name])"> description </div>
-      <div class="drop_down_submenu">
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_in_edges();"> edges-in </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_out_edges();"> edges-out </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_all_edges();"> edges-all </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); unpin(clicked_node);"> unpin </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); pin(clicked_node);"> pin </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); request_node_description(clicked_node[name]);"> description </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
+      <!-- <div class="drop-down-submenu montserrat-body">
         change server:
-        <div class="drop_down_option" onclick="change_server(clicked_node, 0)"> 0 </div>
-        <div class="drop_down_option" onclick="change_server(clicked_node, 1)"> 1 </div>
-      </div>
+        <div class="drop-down-option montserrat-body" onclick="change_server(clicked_node, 0)"> 0 </div>
+        <div class="drop-down-option montserrat-body" onclick="change_server(clicked_node, 1)"> 1 </div>
+      </div> -->
     </div>
     <div id="node-drop-down" class="drop-down">
-      <div class="drop_down_option" onclick="add_anchor(0)"> server 0 </div>
-      <div class="drop_down_option" onclick="add_anchor(1)"> server 1 </div>
-      <div class="drop_down_option" onclick="update_grouping_nodes()"> group </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div>
     </div>
     <div class="app-container">
       <div class="node-list-menu">
@@ -323,28 +323,40 @@
 
       let nodes = JSON.parse(data.nodes);
       let edges = JSON.parse(data.edges);
+      source.children = [];
 
-      nodes.forEach((node) => {            // check if the node is loaded already 
-        if(!loaded.includes(node[name])){  // if it is don't update it so d3 doesn't explode
+      // check if the node is loaded already
+      // if it is don't update it so d3 doesn't explode
+      nodes.forEach((node) => {
+        if(!loaded.includes(node[name])){
           node_data.push(node);
           loaded.push(node[name]);
+          source.children.push(node);
+          node.parents = [source.name];
         }else{
-          let a = node_data.filter(n => n[name] == node[name]);
-          a['similarity'] = node['similarity'];
+          let child = node_data.filter((n) => n[name] == node[name])[0];
+          source.children.push(child);
+          child.parents.push(source.name);
+          child.parents = [...new Set(child.parents)];
         }
       });
 
+      console.log("update_nodes: ", node_data);
+
+      // add groups to the edges for coloring
+      // based on data source 
       edges.forEach((edge) => {
         if(edge['group']) return;
-        edge['group'] = source;
+        edge['group'] = source.group;
       });
 
       // prune unused nodes
       node_data.map((node) => edges.filter((e) => e.source == node[name] || e.target == node[name])?node:undefined);
-      node_data.flat();
+      node_data.filter((node) => node == undefined);
 
-      links[`group_${source}`] = JSON.parse(JSON.stringify(edges)); // keep a copy of the links
-      link_data[`group_${source}`] = edges;                         // set the link data
+      // keep a copy of the links and update the link data
+      link_data[`group_${source.group}`] = [...(link_data[`group_${source.group}`] ?? []), ...(edges ?? [])];
+      links = JSON.parse(JSON.stringify(link_data));
 
       update_graph();
     }
@@ -361,16 +373,21 @@
       link_ids = link_ids.map((link) => [link.source.id ?? link.source, link.target.id ?? link.target]);
       link_ids = link_ids.flat();
 
+      console.log("unload_nodes[before]: ", node_data);
       node_data = node_data.filter((node) => link_ids.includes(node));
+      console.log("unload_nodes: ", node_data)
     }
 
+// ---------------------- Grouping ---------------------- //
+ 
     // filters out any links with nodes that are not currently displayed
     function update_group_links(data){
       let new_links = JSON.parse(data.edges);
 
-      new_links.forEach((link, index) => {                                                                      // filter new grouping links to 
-        let group_nodes = node_data.filter((node) => node[name] == link.source || node[name] == link.target);   // only include nodes in the
-        if(group_nodes.length > 1) return;                                                                      // graph 
+      new_links.forEach((link, index) => {
+        let group_nodes = node_data.filter((node) => node[name] == link.source ||  // filter new grouping links to
+                                                     node[name] == link.target);   // only include nodes in the graph
+        if(group_nodes.length > 1) return;
         
         new_links[index] = undefined;
       });
@@ -379,9 +396,17 @@
       grouping_links.push(...new_links); // set the group links to the new links
     }
 
+    function group_children(anchor_name){
+      let node = selected_nodes.filter((node) => node.name == anchor_name)[0];
+      console.log(node);
+      grouping_nodes.push(...node.children);
+
+      update_grouping_nodes();
+    }
+
+
     function update_grouping_nodes(){
       let requests = [];
-      grouping_nodes.push(clicked_node);
       grouping_nodes.forEach((group_node) =>
         requests.push(request_neighbor_edges({name: group_node[name], source: graph_sources[0], direction: 0}))
       );
@@ -394,11 +419,13 @@
       }).catch((error) => console.error("update_grouping_nodes: ", error));
     }
 
+    
+
     // updates the depth of the edge search
     function update_depth(){
       depth = document.getElementById("depth").value;
 
-      request_graph_data(graph_sources, "UPDATE_DEPTH"); 
+      request_graph_data(selected_nodes, "UPDATE_DEPTH"); 
       update_graph();
     }
 
@@ -438,9 +465,7 @@
       document.getElementById('dx10').value = new_selection;
 
       let diff = selected_nodes.length - new_selection.length;
-      
-      // BUG HERE maybe?
-      
+            
       if(diff < 0){ // check if a node was added to the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
           if((selected_nodes[i] ?? {name:''}).name  == new_selection[j]){ continue; }
@@ -459,7 +484,7 @@
         }
       }
 
-      request_graph_data(graph_sources, "UPDATE_SELECTION");
+      request_graph_data(selected_nodes, "UPDATE_SELECTION");
     }
 
     // updates the color of the root nodes
@@ -499,7 +524,8 @@
       update_embedding_string();
 
       if(coloring == 1){
-        update_nodes(get_url(8000));
+        // TODO: Add a function that updates node coloring parameters
+        console.log("UPDATE COMPARISON: coloring == 1")
       }
 
       state_push(get_state(), "UPDATE COMPARISON");
@@ -610,7 +636,7 @@
     function set_all_edges(){
       let node = selected_nodes.find((n) => n.name == clicked_node[name]);
       node.direction = 0;
-      request_graph_data(graph_sources, `SET_ALL_EDGES: ${clicked_node[name]}`);
+      request_graph_data(selected_nodes, `SET_ALL_EDGES: ${clicked_node[name]}`);
       hide_menu(drop_down);
     }
 
@@ -618,7 +644,7 @@
     function set_out_edges(){
       let node = selected_nodes.find((n) => n.name == clicked_node[name]);
       node.direction = 1;
-      request_graph_data(graph_sources, `SET_OUT_EDGES: ${clicked_node[name]}`);
+      request_graph_data(selected_nodes, `SET_OUT_EDGES: ${clicked_node[name]}`);
       hide_menu(drop_down);
     }
 
@@ -626,7 +652,7 @@
     function set_in_edges(){
       let node = selected_nodes.find((n) => n.name == clicked_node[name]);
       node.direction = 2;
-      request_graph_data(graph_sources, `SET_IN_EDGES: ${clicked_node[name]}`);
+      request_graph_data(selected_nodes, `SET_IN_EDGES: ${clicked_node[name]}`);
       hide_menu(drop_down);
     }
 
@@ -655,7 +681,7 @@
       }else if(node.group == 0){
         node.group = 1;
       }
-      request_graph_data(graph_sources, `CHANGE SERVER: ${node.name}`);
+      request_graph_data(selected_nodes, `CHANGE SERVER: ${node.name}`);
       hide_menu(drop_down);
     }
     

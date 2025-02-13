@@ -1,10 +1,12 @@
 :root{
-  --node-menu-bg-color: #dedede;
+  --bg-color-1: #dedede;
   --text-box-bg-color: #efefef;
   --graph-bg-color: #efefef;
   --grid-lines-color: #dedede;
 
   --font-color-1: #232323;
+
+  --standard-radius: 5px;
 }
 
 *{
@@ -50,7 +52,7 @@ hr{
 
 ::-webkit-scrollbar-thumb{
   margin: .25em;
-  border-radius: .25em;
+  border-radius: var(--standard-radius);
   background-color: #cdcdcd;
 }
 
@@ -67,7 +69,7 @@ hr{
 .node-list-menu{
   width: 20vw;
   height: 101vh;
-  background-color: var(--node-menu-bg-color);
+  background-color: var(--bg-color-1);
   box-shadow: -5em 0 .25em 5em rgba(0,0,0,.2),
                0em 0 .5em 0em rgba(239,239,239,.5) inset;
   z-index: 2;
@@ -106,22 +108,28 @@ hr{
 }
 
 .drop-down{
+  min-width: 10em;
   position: absolute;
   display: none;
-  background-color: #fff;
+  background-color: var(--bg-color-1);
+  border-radius: var(--standard-radius);
 }
 
-.drop_down_option{
-  padding: 5px;
-  border: 1px solid black;
+.drop-down-option{
+  padding: .25em;
 }
 
-.drop_down_submenu{
+.drop-down-option:first-child{
+  border-top-left-radius: var(--standard-radius);
+  border-top-right-radius: var(--standard-radius);
+}
+
+.drop-down-submenu{
   display: flex;
   border: 1px solid black;
 }
 
-.drop_down_submenu > .drop_down_option{
+.drop-down-submenu > .drop-down-option{
   flex-basis: 1;
   text-align: center;
   vertical-align: middle;
@@ -129,8 +137,8 @@ hr{
   border: 0;
 }
 
-.drop_down_option:hover{
-  background-color: #eee;
+.drop-down-option:hover{
+  background-color: #555;
 }
 
 .menu-item-container{
@@ -145,7 +153,7 @@ hr{
   width: 22em;
   overflow-y: scroll;
   overflow-x: hidden;
-  border-radius: 5px;
+  border-radius: var(--standard-radius);
   padding: 5px;
   font-size: 12pt;
 }
@@ -167,7 +175,7 @@ hr{
 input{
   margin: 5px;
   border: 1px;
-  border-radius: 3px;
+  border-radius: var(--standard-radius);
   padding: 3px;
 }
 
