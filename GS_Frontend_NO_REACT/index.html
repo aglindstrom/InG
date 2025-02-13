@@ -199,6 +199,7 @@
     // updateGraph this is the d3 rendering and simulation part 
     //
     function update_graph() {
+      console.log("UPDATE GRAPH");
       // Filter nodes and links based on selectedNodeIds
       if(!node_data) return;
 
@@ -260,7 +261,6 @@
       grouping = grouping.enter()
           .append("line")
           .attr("class", "grouping")
-          .attr("stroke", "#ffff00")
           .merge(grouping);
       
       let max_perplexity = filtered_links.reduce((acc, link) => acc > link.perplexity? acc: link.perplexity, 0);
@@ -268,12 +268,16 @@
       // Restart simulation
       simulation.nodes(node_data).on("tick", ticked);
       simulation.force("link").links(filtered_links).strength(.05); //d => max_perplexity/d.perplexity*scale);
-      simulation.force("grouping").links(grouping_links).strength(.5);
+      simulation.force("grouping").links(grouping_links).strength(.07);
       simulation.alpha(1).restart();
 
     }
 
     function ticked() {
+        grouping.attr("x1", d => clamp(d.source.x, width/2, padding))
+                .attr("y1", d => clamp(d.source.y, height/2, padding))
+                .attr("x2", d => clamp(d.target.x, width/2, padding))
+                .attr("y2", d => clamp(d.target.y, height/2, padding));
         link.attr("x1", d => clamp(d.source.x, width/2, padding))
             .attr("y1", d => clamp(d.source.y, height/2, padding))
             .attr("x2", d => clamp(d.target.x, width/2, padding))
@@ -419,7 +423,7 @@
       }).catch((error) => console.error("update_grouping_nodes: ", error));
     }
 
-    
+
 
     // updates the depth of the edge search
     function update_depth(){

@@ -186,7 +186,8 @@ input{
 
 .grouping{
   stroke-width: .1em;
-  stroke-opacity: 1.0;
+  stroke-opacity: 0.05;
+  stroke: #000;
 }
 
 .label{
