@@ -1,4 +1,7 @@
 __*__
 
+GS_Backend/data/*
+
 *.csv
+*.csv.gz
 *.shelve*
