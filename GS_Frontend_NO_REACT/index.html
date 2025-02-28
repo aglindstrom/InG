@@ -14,6 +14,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="./history.js"></script>
     <script src="./request.js"></script>
+    <script src="./doc_display.js"></script>
 </head>
 <body>
     <div id="drop-down" class="drop-down">
@@ -112,8 +113,9 @@
           
         </div>
       </div>
+      <div id="doc-display" class="montserrat-body" ondrop="drop_handler(event);" ondragover="drag_over_handler(event);">
+      </div>
       <div id="graph">
-        <div id="graph-console" class="montserrat-body">> </div>
       </div>
     </div>
     <script>
@@ -132,6 +134,7 @@
     const graph_sources = [{port:8000, id:0},                     // list of valid source ports 
                            {port:8001, id:1}];                    //
     const description_source = {port:7999, id:'nodes'};           // list of valid description source ports
+
     
     // initial values
     let depth = document.getElementById("depth").value;                   // initial depth = 1
