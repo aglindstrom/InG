@@ -3,209 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Force-Directed Graph with Node Selection</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" >
+    <link rel="stylesheet" href="index.css"/>
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <style>
-        *{
-				  border: 0;
-				  margin: 0;
-				  padding: 0;
-          font-family: Arial;
-				}
-
-				.app-container{
-				  width: 95vw;
-				  height: 95vh;
-				  display: flex;
-				}
-				
-				.node-list-menu{
-				  width: 20vw;
-				  height: 100vh;
-          background-color: #eee;
-				}
-				
-				#graph{
-				  width: 80%;
-				  height: 100%;
-				}
-
-        #node-selector{
-          width: 100%;
-          height: 50%;
-        }
-
-        #node-options{
-          padding: 2px;
-          width: 100%;
-          height: 25%;
-        }
-
-        #update_graph{
-          color: #efefef;
-          background-color: #1967D2;
-          padding: 5px;
-          border: 1px solid #0A3361;
-        }
-
-        #update_graph:active{
-          background-color: #2178E3;
-        }
-
-        #out{
-          visibility: hidden;
-        }
-
-        #drop-down{
-          position: absolute;
-          display: none;
-          background-color: #fff;
-        }
-
-        #drop-down > div{
-          padding: 5px;
-          border: 1px solid black;
-        }
-
-        #drop-down > div:hover{
-          background-color: #eee;
-        }
-
-        .number{
-          width: 25%;
-          padding: 5px;
-          border: 1px solid #000;
-        }
-
-        .text{
-          resize: vertical;
-          width: 90%;
-          height: 50%;
-          padding: 5px;
-          border: 1px solid #000;
-        }
-
-        .node {
-          stroke: #fff;
-          stroke-width: 1.5px;
-        }
-
-        input{
-          margin: 5px;
-          border: 1px;
-          border-radius: 3px;
-          padding: 3px;
-        }
-
-        .link {
-          stroke: #999;
-          stroke-opacity: 0.6;
-        }
-
-        .label{
-          font-size: 10pt;
-          font-weight: bold;
-          font-family: 'Courier New', Courier, monospace;
-          fill: white;
-          pointer-events: none;
-        }
-
-    </style>
+    <script src="./history.js"></script>
+    <script src="./request.js"></script>
+    <script src="./doc_display.js"></script>
 </head>
 <body>
-    <div id="drop-down">
-      <div onclick="set_in_edges()"> edges-in </div>
-      <div onclick="set_out_edges()"> edges-out </div>
-      <div onclick="set_all_edges()"> edges-all </div>
-      <div onclick="unpin()"> unpin </div>
-      <div onclick="pin()"> pin </div>
+    <div id="drop-down" class="drop-down">
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_in_edges();"> edges-in </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_out_edges();"> edges-out </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_all_edges();"> edges-all </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); unpin(clicked_node);"> unpin </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); pin(clicked_node);"> pin </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); request_node_description(clicked_node[name]);"> description </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
+      <!-- <div class="drop-down-submenu montserrat-body">
+        change server:
+        <div class="drop-down-option montserrat-body" onclick="change_server(clicked_node, 0)"> 0 </div>
+        <div class="drop-down-option montserrat-body" onclick="change_server(clicked_node, 1)"> 1 </div>
+      </div> -->
+    </div>
+    <div id="node-drop-down" class="drop-down">
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div>
     </div>
     <div class="app-container">
       <div class="node-list-menu">
         <div id="node-options">
-          <div>
-            <label for="anchor_color">anchor color</label>
-            <input id="anchor_color" type="color" value="#000000" onchange="update_color()"/>
+          <div class="menu-item-container">
+            <div>
+              <label class="montserrat-title" for="anchor_color">anchor color</label>
+              <input id="anchor_color" type="color" value="#000000" onchange=""/>
+            </div>
+            <div>
+              <label class="montserrat-title" for="node_color">node color</label>
+              <input id="node_color" type="color" value="#5a5a5a" onchange="update_node_color()"/>
+            </div>
           </div>
-          <div>
-            <label for="depth">depth</label>
-            <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url());"/>
+
+          <hr/>
+
+          <div class="menu-item-container" style="width:50%">
+            <div style="display:flex; justify-content: space-between;">
+              <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
+              <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
+            </div>
+            <div style="display:flex; justify-content: space-between;">
+              <label style="flex-basis:1;" class="montserrat-title" for="threshold">threshold</label>
+              <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
+            </div>
+            <div style="display:flex; justify-content: space-between;">
+              <label style="flex-basis:1;" class="montserrat-title" for="scale">scale</label>
+              <input id="scale" class="number" type="number" min="0" value=".01" step=".01" onchange="update_scale()"/>
+            </div>
           </div>
-          <div>
-            <label for="threshold">threshold</label>
-            <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
-          </div>
-          <div>
-            <label for="scale">scale</label>
-            <input id="scale" class="number" type="number" min="0" value="1" step="1" onchange="update_scale()"/>
-          </div>
-          <fieldset>
-            <legend>Coloring</legend>
-          <div>
-            <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
-            <label for="ratio">ratio</label>
-          </div>
-          <div>
-            <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
-            <label for="cossim">cossim</label>
-          </div>
+
+          <hr/>
+
+          <fieldset class="menu-item-container">
+            <legend class="montserrat-title">Coloring</legend>
+            <div>
+              <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
+              <label for="ratio" class="montserrat-body">ratio</label>
+            </div>
+            <div>
+              <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
+              <label for="cossim" class="montserrat-body">cossim</label>
+            </div>
           </fieldset>
-          <fieldset>
-            <legend>Labeling</legend>
-          <div>
-            <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
-            <label for="text">DX10</label>
-          </div>
-          <div>
-            <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
-            <label for="similarity">similarity</label>
-          </div>
+          <fieldset class="menu-item-container">
+            <legend class="montserrat-title">Labeling</legend>
+            <div>
+              <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
+              <label for="text" class="montserrat-body">DX10</label>
+            </div>
+            <div>
+              <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
+              <label for="similarity" class="montserrat-body">similarity</label>
+            </div>
           </fieldset>
-          <div>  
-            <label for="dx10">selection</label>
-            <textarea id="dx10" class="text" placeholder="dx10 codes" onchange="update_selection()"></textarea>
+
+          <hr/>
+
+          <div class="menu-item-container">  
+            <span class="montserrat-title">selection</span>
+            <textarea id="dx10" class="text-box montserrat-body" placeholder="dx10 codes" onchange="update_selection()"></textarea>
           </div>
-    <!--  <div>
-            <input id="update_graph" type="button" value="Add Anchor" onclick="load_data(get_url())"/>
-          </div> -->
-          <div>
-            <label for="comparison">comparison string</label>
-            <textarea id="comparison" class="text" placeholder="comparison string" value="Certain infectious and parasitic diseases (A00-B99)" onchange="update_comparison()" rows="10"></textarea>
+          <div class="menu-item-container">
+            <span class="montserrat-title">comparison string</span>
+            <div>
+              <textarea id="comparison" class="text-box montserrat-body" placeholder="comparison string" value="Certain infectious and parasitic diseases (A00-B99)" onchange="update_comparison()" rows="10"></textarea>
+            </div>
           </div>
+          <div class="menu-item-container">
+            <span class="montserrat-title">state stack</span>
+            <div id = "state_stack" class = "text-box montserrat-body">
+            </div>
+          </div>
+
+          <hr/>
+          
         </div>
+      </div>
+      <div id="doc-display" class="montserrat-body" ondrop="drop_handler(event);" ondragover="drag_over_handler(event);">
       </div>
       <div id="graph">
       </div>
     </div>
-<script>
-    document.onclick = hide_menu;
+    <script>
 
     // constants
     const context = document.getElementById("graph");
     const width = context.scrollWidth;   // working width and height for the simulation
     const height = context.scrollHeight; //
     const padding = 20;
-    const drop_down = document.getElementById("drop-down");       // the dropdown menu for right click
+    const drop_down = document.getElementById("drop-down");           // the dropdown menu for right click
+    const node_drop_down = document.getElementById("node-drop-down"); // the dropdown menu for node clicks
+    const menus = [drop_down, node_drop_down];
     const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
-    const invokeURL = "http://127.0.0.1:8000";                    // the address of the API
+    const link_color = d3.scaleSequential(d3.schemeSet1);         // node colors for comparison string
+    const invokeURL = "http://127.0.0.1";                         // the address of the API
+    const graph_sources = [{port:8000, id:0},                     // list of valid source ports 
+                           {port:8001, id:1}];                    //
+    const description_source = {port:7999, id:'nodes'};           // list of valid description source ports
+
     
     // initial values
     let depth = document.getElementById("depth").value;                   // initial depth = 1
     let comparison = document.getElementById("comparison").value;         // initial comparison string = ''
     let name = 'dx10';                                                    // node name column. In the future a menu using the keys should be used to determin this
     let distance_threshold = document.getElementById("threshold").value;  // initial distance threshold
-    let anchor_color = document.getElementById("anchor_color").value;     // initial anchor color
+    let anchor_color = 'linear-gradient(90deg, rgb(255,133,0) 0%, rgba(75,75,75) 100%)';     // initial anchor color
+    let node_color = document.getElementById("node_color").value;
     let scale = document.getElementById("scale").value;
     let coloring = 0;
     let labeling = 0;
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
+    let links = {};
+
     // graph data
     let loaded = [];      // list of node names that are currently loaded 
-    let selection = [];   // list of selected node (anchor) names
-    let directions = [];  // list of selected node search directions (0 = Both directions, 1 = edges where this node is the source, 2 = edges where this node is the target)
-    let nodesData = [];   // all the nodes
-    let linksData = [];   // all the edges
+    let node_data = [];   // all the nodes
+    let link_data = {};   // all the links
+    let grouping_nodes = [];
+    let grouping_links = [];
+    let selected_nodes = [];
+
+    const init_state = get_state();
+    state_push(init_state, "INITIALIZE");
 
     // Create SVG
     const svg = d3.select("#graph").append("svg")
@@ -216,7 +170,8 @@
 
     // Create force simulation
     const simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().id(d => d.id))
+        .force("link", d3.forceLink().id(d => d[name]))
+        .force("grouping", d3.forceLink().id(d => d[name]))
         .force("charge", d3.forceManyBody().strength(-150))
         .force("y_sort-", d3.forceY(-height/2).strength(d => .05*d.equiv))
         .force("y_sort+", d3.forceY(height/2).strength(d => .05*(1-d.equiv)))
@@ -228,8 +183,8 @@
        .attr("viewBox", [0, 0, 10, 10])
        .attr("refX", -40)
        .attr("refY", 5)
-       .attr("markerWidth", 6)
-       .attr("markerHeight", 6)
+       .attr("markerWidth", 4)
+       .attr("markerHeight", 4)
        .attr("orient", "auto")
        .append("path")
        .attr("cx", 0)
@@ -239,21 +194,27 @@
 
     // Add nodes labels and links to the graph
     let link = svg.append("g").selectAll(".link");
+    let grouping = svg.append("g").selectAll(".grouping");
     let node = svg.append("g").selectAll(".node");
     let text = svg.append("g").selectAll(".label");
-
 
     //
     // updateGraph this is the d3 rendering and simulation part 
     //
     function update_graph() {
+      console.log("UPDATE GRAPH");
       // Filter nodes and links based on selectedNodeIds
-      let filteredLinks = linksData.filter(d => (1-d.distance) > distance_threshold);
-      
-      window.parent.postMessage({"nodes": nodesData, "links": filteredLinks});
+      if(!node_data) return;
+
+      let filtered_links = [];
+      for(const group in link_data){
+        filtered_links.push(link_data[group]);
+      }
+      filtered_links = filtered_links.flat();
+      filtered_links = filtered_links.filter(d => (d.perplexity) > distance_threshold);
 
       // Update nodes
-      node = node.data(nodesData, d => d.id);
+      node = node.data(node_data, d => d[name]);
       node.exit().remove();
       node = node.enter()
           .append("rect")
@@ -261,29 +222,19 @@
           .attr("height", 14)
           .attr("width", 60)
           .attr("rx", 4)
-          
-          .on("click", e => node_click(e.srcElement.__data__[name]))
-          .on("contextmenu", e => handle_right_click(e))
+          .on("click", e => node_click(e))
+          .on("contextmenu", e => anchor_right_click(e))
           .call(drag(simulation))
           .merge(node);
 
       node.append("title")
           .text( d => d[name] );
 
-      d3.selectAll("rect").attr("fill", d => { d.equiv = similarity(d);
-            return (selection.includes(d[name]))? anchor_color: color((1-d.equiv)*scale);});
-    
-      // Update links
-      link = link.data(filteredLinks, d => d.source + "-" + d.target);
-      link.exit().remove();
-      link = link.enter()
-          .append("line")
-          .attr("class", "link")
-          .attr("marker-start", "url(#arrow)")
-          .merge(link);
-
+      d3.selectAll("rect").attr("fill", d => { d.equiv = .5; //similarity(d);
+            return (is_anchor(d[name]))? anchor_color: node_color;}); //color((1-d.equiv)*scale);});
+      
       // Update lables
-      text = text.data(nodesData, d => d.id);
+      text = text.data(node_data, d => d[name]);
       text.exit().remove();
       text = text.enter()
           .append("text")
@@ -293,17 +244,43 @@
           .attr("dy", 3.5)
           .merge(text);
       text.text(d => get_label(d).slice(0,7));
+
+      // Update links
+      link = link.data(filtered_links, d => d.source[name] + "-" + d.target[name]);
+      link.exit().remove();
+      link = link.enter()
+          .append("line")
+          .attr("class", "link")
+          .attr("marker-start", "url(#arrow)")
+          .attr("stroke", d => link_color(d.group))
+          .merge(link);
+
+      link.append("title")
+          .text(d => `group: ${d.group}`);
+
       
+      grouping = grouping.data(grouping_links, d => d.source[name] + "-" + d.target[name]);
+      grouping.exit().remove();
+      grouping = grouping.enter()
+          .append("line")
+          .attr("class", "grouping")
+          .merge(grouping);
       
+      let max_perplexity = filtered_links.reduce((acc, link) => acc > link.perplexity? acc: link.perplexity, 0);
 
       // Restart simulation
-      simulation.nodes(nodesData).on("tick", ticked);
-      simulation.force("link").links(filteredLinks).strength(d => (1-d.distance)/5);
+      simulation.nodes(node_data).on("tick", ticked);
+      simulation.force("link").links(filtered_links).strength(.05); //d => max_perplexity/d.perplexity*scale);
+      simulation.force("grouping").links(grouping_links).strength(.07);
       simulation.alpha(1).restart();
 
     }
 
     function ticked() {
+        grouping.attr("x1", d => clamp(d.source.x, width/2, padding))
+                .attr("y1", d => clamp(d.source.y, height/2, padding))
+                .attr("x2", d => clamp(d.target.x, width/2, padding))
+                .attr("y2", d => clamp(d.target.y, height/2, padding));
         link.attr("x1", d => clamp(d.source.x, width/2, padding))
             .attr("y1", d => clamp(d.source.y, height/2, padding))
             .attr("x2", d => clamp(d.target.x, width/2, padding))
@@ -330,9 +307,8 @@
 
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
-            if(selection.includes(d[name])){
-              d.fx = clamp(event.x, width/2, padding);
-              d.fy = clamp(event.y, height/2, padding);
+            if(is_anchor(d[name])){
+              pin(d);
             }else{
               d.fx = null;
               d.fy = null;
@@ -346,146 +322,202 @@
     }
     // END updateGraph
 
-    // Initial render with no nodes selected
-    // update_graph();
-
-    // api call that loads in all the nodes
-    async function load_data(url){
-      return await fetch(url)
-	                 .then((resp) => resp.json())
-                   .then((data) => update_nodes(data))
-	                 .catch((error) => console.log(error));
-    }
-
-    // api call to load keys potentially useful in the future for selecting the name column for the nodes
-    async function load_keys(){
-      return await fetch('http://127.0.0.1:8000/api/graph/keys/')
-                   .then((resp) => resp.json())
-                   .then((data) => update_keys(data))
-                   .catch((error) => console.log(error));
-    }
-    
     // called by load_data ONLY
     // loads new data into the node and link lists
     // also removes data from them
-    function update_nodes(data){
+    function update_nodes(data, source){
       if(data == null) return;
 
       let nodes = JSON.parse(data.nodes);
       let edges = JSON.parse(data.edges);
-      console.log("nodes: ", nodes, "edges: ", edges);
+      source.children = [];
 
-      let unload = loaded;
-
-      nodes.forEach((node) => {            // check if the node is loaded already 
-        if(!loaded.includes(node[name])){  // if it is don't update it so d3 doesn't explode
-          nodesData.push(node);
+      // check if the node is loaded already
+      // if it is don't update it so d3 doesn't explode
+      nodes.forEach((node) => {
+        if(!loaded.includes(node[name])){
+          node_data.push(node);
           loaded.push(node[name]);
+          source.children.push(node);
+          node.parents = [source.name];
         }else{
-          let a = nodesData.filter(n => n[name] == node[name]);
-
-          a['similarity'] = node['similarity']
-        }
-
-        
-
-        unload = unload.filter(n => n != node[name]); // update the unload list 
-      });
-
-      nodesData.forEach((node) =>{                        // unload all of the nodes no longer in use
-        if(unload.includes(node[name])){                  // 
-          nodesData = nodesData.filter(n => n !== node);  //
-          loaded = loaded.filter(n => n !== node[name]);  //
+          let child = node_data.filter((n) => n[name] == node[name])[0];
+          source.children.push(child);
+          child.parents.push(source.name);
+          child.parents = [...new Set(child.parents)];
         }
       });
 
-      linksData = edges;  // set the links
+      console.log("update_nodes: ", node_data);
+
+      // add groups to the edges for coloring
+      // based on data source 
+      edges.forEach((edge) => {
+        if(edge['group']) return;
+        edge['group'] = source.group;
+      });
+
+      // prune unused nodes
+      node_data.map((node) => edges.filter((e) => e.source == node[name] || e.target == node[name])?node:undefined);
+      node_data.filter((node) => node == undefined);
+
+      // keep a copy of the links and update the link data
+      link_data[`group_${source.group}`] = [...(link_data[`group_${source.group}`] ?? []), ...(edges ?? [])];
+      links = JSON.parse(JSON.stringify(link_data));
+
       update_graph();
     }
+
+    function unload_nodes(){
+      let link_ids = [];
+      let keep = [];
+
+      for(const group in link_data){
+        link_ids.push(link_data[group]);
+      }
+
+      link_ids = link_ids.flat();
+      link_ids = link_ids.map((link) => [link.source.id ?? link.source, link.target.id ?? link.target]);
+      link_ids = link_ids.flat();
+
+      console.log("unload_nodes[before]: ", node_data);
+      node_data = node_data.filter((node) => link_ids.includes(node));
+      console.log("unload_nodes: ", node_data)
+    }
+
+// ---------------------- Grouping ---------------------- //
+ 
+    // filters out any links with nodes that are not currently displayed
+    function update_group_links(data){
+      let new_links = JSON.parse(data.edges);
+
+      new_links.forEach((link, index) => {
+        let group_nodes = node_data.filter((node) => node[name] == link.source ||  // filter new grouping links to
+                                                     node[name] == link.target);   // only include nodes in the graph
+        if(group_nodes.length > 1) return;
+        
+        new_links[index] = undefined;
+      });
+      
+      new_links = new_links.filter((node) => node != undefined); // prune links that contained nodes not in the graph
+      grouping_links.push(...new_links); // set the group links to the new links
+    }
+
+    function group_children(anchor_name){
+      let node = selected_nodes.filter((node) => node.name == anchor_name)[0];
+      console.log(node);
+      grouping_nodes.push(...node.children);
+
+      update_grouping_nodes();
+    }
+
+
+    function update_grouping_nodes(){
+      let requests = [];
+      grouping_nodes.forEach((group_node) =>
+        requests.push(request_neighbor_edges({name: group_node[name], source: graph_sources[0], direction: 0}))
+      );
+
+      Promise.all(requests).then(() => {
+        console.log("update_grouping_nodes: ", grouping_links);
+        grouping_links = [... new Set(grouping_links)] ?? []; // remove duplicates
+        state_push(get_state(), `GROUP_NODES: ${clicked_node[name]}`);
+        update_graph();
+      }).catch((error) => console.error("update_grouping_nodes: ", error));
+    }
+
+
 
     // updates the depth of the edge search
     function update_depth(){
       depth = document.getElementById("depth").value;
 
-      load_data(get_url());
+      request_graph_data(selected_nodes, "UPDATE_DEPTH"); 
       update_graph();
     }
 
     // updates the edge weight threshold
     function update_threshold(){
       distance_threshold = document.getElementById("threshold").value;
+
+      state_push(get_state(), "UPDATE THRESHOLD");
       update_graph();
     }
 
     function update_scale(){
       scale = document.getElementById("scale").value;
+
+      state_push(get_state(), "UPDATE SCALE");
       update_graph();
     }
 
     // updates the selection of anchor nodes.
     // it also manages the directions list.
     function update_selection(){
+
       let new_selection = document.getElementById('dx10').value;
-      new_selection = new_selection.split(",");
-
-      for(const node in new_selection){
-        node.trim();
+      if(new_selection == ''){ // if the selection is empty re-initialize everything
+        loaded = [];
+        node_data = [];
+        link_data = [];
+        selected_nodes = [];
+        
+        state_push(get_state(), "UPDATE SELECTION");
+        update_graph(); // update the graph so everything disapears
+        return;
       }
+      
+      new_selection = new_selection.split(",").map((id) => id.trim().padEnd(4,'-'));
 
-      let diff = selection.length - new_selection.length
-      
-      // BUG HERE maybe?
-      console.log("selection: ", selection, "new_selection: ", new_selection);
-      
+      document.getElementById('dx10').value = new_selection;
+
+      let diff = selected_nodes.length - new_selection.length;
+            
       if(diff < 0){ // check if a node was added to the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
-          if(selection[i] ?? '' == new_selection[j]){ continue; }
-          console.log("diff: ", diff);
-          directions.splice(j, 0, 1);
+          if((selected_nodes[i] ?? {name:''}).name  == new_selection[j]){ continue; }
+          selected_nodes.splice(j, 0, {name: new_selection[j],
+                                  direction: 1,
+                                  group: 0,});
           diff++;
           j++;
         }
-        console.log("diff: ", diff)
       }else{ // check if a node was deleted from the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
-          if(selection[i] == new_selection[j] ?? ''){ continue; }
-          console.log("diff: ", diff);
-          directions.splice(j, 1);
+          if((selected_nodes[i] ?? {name:''}).name == new_selection[j] ?? ''){ continue; }
+          selected_nodes.splice(j, 1);
           diff--;
           j--;
         }
       }
-      
-      selection = new_selection;
-      console.log("selection: ", selection, "new_selection: ", new_selection);
 
-      if(selection == []){ // if the selection is empty re-initialize everything
-        loaded = [];
-        selection = [];
-        directions = [];
-        nodesData = [];
-        linksData = [];
-        update_graph(); // update the graph so everything disapears
-        return;
-      }
-
-      load_data(get_url());
-      update_graph();
+      request_graph_data(selected_nodes, "UPDATE_SELECTION");
     }
 
     // updates the color of the root nodes
-    function update_color(){
+    function update_anchor_color(){
       anchor_color = document.getElementById("anchor_color").value;
+      state_push(get_state(), "UPDATE COLOR");
+      update_graph();
+    }
+
+    function update_node_color(){
+      node_color = document.getElementById("node_color").value;
+      state_push(get_state(), "UPDATE COLOR");
       update_graph();
     }
 
     function update_coloring(mode){
       coloring = mode;
+
+      state_push(get_state(), "UPDATE COLORING");
       update_graph();
     }
 
     function update_labeling(mode){
       labeling = mode;
+
+      state_push(get_state(), "UPDATE COMPARISON");
       update_graph();
     }
 
@@ -499,8 +531,11 @@
       update_embedding_string();
 
       if(coloring == 1){
-        update_nodes(get_url());
+        // TODO: Add a function that updates node coloring parameters
+        console.log("UPDATE COMPARISON: coloring == 1")
       }
+
+      state_push(get_state(), "UPDATE COMPARISON");
       update_graph();
     }
 
@@ -515,16 +550,8 @@
       const post = fetch(request).then((resp) => resp.json() ).then((json) => console.error(json.detail));
     }
 
-    // node click handler for left click (makes the node an anchor node)
-    function node_click(name){
-      if(selection.includes(name)) return;
+   
 
-      selection.push(name);
-      directions.push(1);
-      document.getElementById('dx10').value = selection.join(",");
-      
-      update_selection();
-    }
 
     // ratio of the number of characters in the string that match in order
     function similarity(node){
@@ -536,6 +563,9 @@
     }
     
     function string_ratio(a, b){
+      return 0;
+      if(!a.length || !b.length) return 0;
+
       const min_len = a.length < b.length ? a.length: b.length;
       const max_len = a.length > b.length ? a.length: b.length;
       let i = 0;
@@ -549,199 +579,171 @@
       return (i/max_len);
     }
 
-    // builds the url to be sent to the api
-    function get_url(){ 
-	    let params = new URLSearchParams({codes: selection.join(","), depth: depth, directions: directions.join(",")});
-      let url = `${invokeURL}/api/graph?${params.toString()}`;
-      console.log(url);
-      return url;
+    // node click handler for left click (makes the node an anchor node)
+    function node_click(e){
+      hide_menus();
+      let node_name = e.srcElement.__data__[name];
+      clicked_node = e.srcElement.__data__;
+      if(is_anchor(node_name)) return;
+
+      move_menu(node_drop_down, e);
+      show_menu(node_drop_down);
+    }
+
+    function add_anchor(group){
+      selected_nodes.push({name: clicked_node[name], direction: 1, group: group});
+      document.getElementById('dx10').value = selected_nodes.map((node) => node.name).join(',');
+      update_selection();
+      hide_menu(node_drop_down);
     }
 
     // node click handler for right click
-    function handle_right_click(e){
-      if(drop_down.style.display == "block"){hide_menu(); return;}
-      clicked_node = e.srcElement.__data__; 
-      if(!selection.includes(clicked_node[name])) return;
-      e.preventDefault();
+    function anchor_right_click(e){
+      hide_menus();
+      clicked_node = e.srcElement.__data__;
 
-      if(e.pageY < height/2){
-        drop_down.style.top = e.pageY + "px";
-        drop_down.style.bottom = null;
-      }else{
-        drop_down.style.bottom = (height - e.pageY) + "px";
-        drop_down.style.top = null;
-      }
+      if(!is_anchor(clicked_node[name])) return;
 
-      drop_down.style.left = e.pageX + "px"; // move the dropdown   
-      drop_down.style.display = "block";     // make it visible
+      e.preventDefault(); // disable the normal context menu
+
+      move_menu(drop_down, e); // move the dropdown into position
+      show_menu(drop_down); // make the dropdown visible
+    }
+    
+    function hide_menus(){
+      menus.forEach((menu) => {
+        hide_menu(menu)
+      });
     }
 
     // hides the right click menu
-    function hide_menu(){
-      drop_down.style.display = "none";
+    function hide_menu(menu){
+      menu.style.display = 'none';
+    }
+
+    function show_menu(menu){
+      menu.style.display = 'block';
+    }
+
+    function move_menu(menu, e){
+      if(e.pageY < height/2){
+        menu.style.top = e.pageY + "px";
+      }else{
+        menu.style.top = (e.pageY + menu.offsetHeight) + "px";
+      }
+
+      menu.style.left = e.pageX + "px"; // move the dropdown   
+    }
+
+    function is_menu_visible(menu){
+      return (menu.style.display != 'none');
     }
 
     // sets to search for edges where this node is the source and target
     function set_all_edges(){
-      let i = selection.indexOf(clicked_node[name]);
-      directions[i] = 0;
-      load_data(get_url());
-      update_graph();
-    }
-
-    // sets to search for edges where this node is the target
-    function set_in_edges(){
-      let i = selection.indexOf(clicked_node[name]);
-      directions[i] = 2;
-      load_data(get_url());
-      update_graph();
+      let node = selected_nodes.find((n) => n.name == clicked_node[name]);
+      node.direction = 0;
+      request_graph_data(selected_nodes, `SET_ALL_EDGES: ${clicked_node[name]}`);
+      hide_menu(drop_down);
     }
 
     // sets to search for edges where this node is the source
     function set_out_edges(){
-      let i = selection.indexOf(clicked_node[name]);
-      directions[i] = 1;
-      load_data(get_url());
-      update_graph();
+      let node = selected_nodes.find((n) => n.name == clicked_node[name]);
+      node.direction = 1;
+      request_graph_data(selected_nodes, `SET_OUT_EDGES: ${clicked_node[name]}`);
+      hide_menu(drop_down);
     }
 
+    // sets to search for edges where this node is the target
+    function set_in_edges(){
+      let node = selected_nodes.find((n) => n.name == clicked_node[name]);
+      node.direction = 2;
+      request_graph_data(selected_nodes, `SET_IN_EDGES: ${clicked_node[name]}`);
+      hide_menu(drop_down);
+    }
+
+    function unpin(node){
+      if(!node['pinned']) return;
+      node['fx'] = null;
+      node['fy'] = null;
+      node['pinned'] = false;
+      state_push(get_state(), `UNPIN: ${node[name]}`);
+      hide_menu(drop_down);
+    }
+
+    function pin(node){
+      if(node['pinned']) return;
+      node['fx'] = node['x'];
+      node['fy'] = node['y'];
+      node['pinned'] = true;
+      state_push(get_state(), `PIN: ${node[name]}`);
+      hide_menu(drop_down);
+    }
+
+    function change_server(e_node){
+      let node = selected_nodes.filter((n) => e_node[name] == n.name)[0];
+      if(node.group == 1){
+        node.group = 0;
+      }else if(node.group == 0){
+        node.group = 1;
+      }
+      request_graph_data(selected_nodes, `CHANGE SERVER: ${node.name}`);
+      hide_menu(drop_down);
+    }
+    
     function clamp(val, bound, pad){
       return ((val < bound-pad)? ((val > -bound+pad)? val : -bound+pad): bound-pad);
     }
 
-    function unpin(){
-      clicked_node['fx'] = null;
-      clicked_node['fy'] = null;
+    function is_anchor(name){
+      return selected_nodes.filter((node) => node.name == name).length != 0;
     }
 
-    function pin(){
-      clicked_node['fx'] = clicked_node['x'];
-      clicked_node['fy'] = clicked_node['y'];
+///////////////// STATE FUNCS //////////////////
+
+    function get_state(){
+      const state = {
+        "links": links,
+        "loaded": loaded,
+        "selected_nodes": selected_nodes,
+        "node_data": node_data,
+        "depth": depth,
+        "comparison": comparison,
+        "name": name,
+        "distance_threshold": distance_threshold,
+        "anchor_color": anchor_color,
+        "scale": scale,
+        "coloring": coloring,
+        "labeling": labeling,
+        "clicked_node": clicked_node
+      };
+      return JSON.stringify(state);
     }
-
-// this is a block of things that could be useful in the future
-/*
-https://observablehq.com/@mbostock/ramp
-function ramp(color, n = 512) {
-  const canvas = DOM.canvas(n, 1);
-  const context = canvas.getContext("2d");
-  canvas.style.margin = "0 -14px";
-  canvas.style.width = "calc(100% + 28px)";
-  canvas.style.height = "40px";
-  canvas.style.imageRendering = "-moz-crisp-edges";
-  canvas.style.imageRendering = "pixelated";
-  for (let i = 0; i < n; ++i) {
-    context.fillStyle = color(i / (n - 1));
-    context.fillRect(i, 0, 1, 1);
-  }
-  return canvas;
-}
-
-
-
-    function update_keys(data){
-      keys = data;
-      if(keys == null) return;
-
-      Object.keys(keys).forEach((key) =>{ 
-        let option = nodeOptions.append("div")
-          .text(key + ": ");
-
-        let selector = {};
-
-        switch(keys[key]["type"]){
-          case "int64": 
-            selector = option.append("select")
-                                 .attr("id", `${key}-op`)
-                                 .on("change", () => {update_path_params(key)});
-
-            selector.append("option")
-                    .attr("value", ">")
-                    .text(">");
-            selector.append("option")
-                    .attr("value", "=")
-                    .text("=");
-            selector.append("option")
-                    .attr("value", "<")
-                    .text("<");
-
-		        option.append("input")
-		          .attr("type", "number")
-              .attr("class", "number")
-              .attr("placeholder", "number")
-              .attr("min", keys[key]["min"])
-              .attr("max", keys[key]["max"])
-              .attr("id", key)
-              .on("change", () => {update_path_params(key)});
-
-            option.append("input")
-                  .attr("type", "radio")
-                  .attr("name", "isName")
-                  .attr("value", key);
-            break;
-
-          case "object":
-              selector = option.append("select")
-                                 .attr("id", `${key}-op`)
-                                 .on("change", () => {update_path_params(key)});
-            selector.append("option")
-                    .attr("value", ">")
-                    .text(">");
-            selector.append("option")
-                    .attr("value", "=")
-                    .text("=");
-            selector.append("option")
-                    .attr("value", "<")
-                    .text("<");
-
-		        option.append("input")
-		          .attr("type", "text")
-              .attr("class", "number")
-              .attr("placeholder", "text")
-              .attr("min", keys[key]["min"])
-              .attr("max", keys[key]["max"])
-              .attr("id", key)
-              .on("change", () => {update_path_params(key)});
-
-            option.append("input")
-                  .attr("type", "radio")
-                  .attr("name", "isName")
-                  .attr("value", key)
-                  .on("click", () => {update_name()});
-            break;
-        }
-        });
-      nodeOptions.append("input")
-                 .attr("id", "update_graph")
-                 .attr("type", "button")
-                 .attr("value", "update_graph")
-                 .on("click", () => {load_data(get_url())});
-    }
-*/
     
+    function set_state(state){
+      loaded = state.loaded;
+      selected_nodes = state.selected_nodes;
+      node_data = state.node_data;
+      link_data = state.links;
+      depth = state.depth;
+      comparison = state.comparison;
+      name = state.name;
+      distance_threshold = state.distance_threshold;
+      anchor_color = state.anchor_color;
+      scale = state.scale;
+      coloring = state.coloring;
+      labeling = state.labeling;
+      clicked_node = state.clicked_node;
 
-/*    function update_name(){
-      let radio_buttons = document.getElementsByName("isName");
-
-      for(const button of radio_buttons){
-        if(button.checked){
-          name = button.value;
-          break;
-        }
-      }
-      console.log("name: ", name);
-      update_nodes(null);
+      document.getElementById('dx10').value = selected_nodes.map((node) => node.name).join(",");
+      document.getElementById('depth').value = depth;
+      document.getElementById('comparison').value = comparison;
+      document.getElementById('threshold').value = distance_threshold;
+      document.getElementById('anchor_color').value = anchor_color;
+      document.getElementById('scale').value = scale;
+      update_graph();
     }
-
-    function update_path_params(key){
-      path_params[key] = {};
-      path_params[key]['val'] = document.getElementById(key).value;
-      path_params[key]['op'] = document.getElementById(`${key}-op`).value;
-      console.log(key, path_params);
-    }
-*/
-
-
     </script>
 </body>
 </html>
