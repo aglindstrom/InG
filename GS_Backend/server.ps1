@@ -9,8 +9,8 @@ $ENV:ING_NODES=$nodes
 $ENV:ING_EDGES=$edges
 $ENV:ING_NAMES=$names
 
-echo $ENV:ING_NODES
-echo $ENV:ING_EDGES
-echo $ENV:ING_NAMES
+Write-Output $ENV:ING_NODES
+Write-Output $ENV:ING_EDGES
+Write-Output $ENV:ING_NAMES
 
 fastapi dev --port $port ./src/main.py 
