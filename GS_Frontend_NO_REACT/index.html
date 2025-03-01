@@ -24,11 +24,6 @@
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); pin(clicked_node);"> pin </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); request_node_description(clicked_node[name]);"> description </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
-      <!-- <div class="drop-down-submenu montserrat-body">
-        change server:
-        <div class="drop-down-option montserrat-body" onclick="change_server(clicked_node, 0)"> 0 </div>
-        <div class="drop-down-option montserrat-body" onclick="change_server(clicked_node, 1)"> 1 </div>
-      </div> -->
     </div>
     <div id="node-drop-down" class="drop-down">
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
@@ -91,10 +86,16 @@
           </fieldset>
 
           <hr/>
-
-          <div class="menu-item-container">  
-            <span class="montserrat-title">selection</span>
-            <textarea id="dx10" class="text-box montserrat-body" placeholder="dx10 codes" onchange="update_selection()"></textarea>
+          <div class="menu-item-container">
+            <span class="montserrat-title">selection
+              <input id="change-view" type="checkbox" onclick="switch_selected_nodes_view()"/>
+              <label for="change-view" id="change-view-label"></label>
+            </span>
+            <div id="selected-nodes" class="montserrat-body">
+              <table id="selected-nodes-table" class="node_table montserrat-body">
+              </table>
+            </div>
+            <textarea id="selected-nodes-text" class="text-box montserrat-body" style="display:block;" placeholder="dx10 codes" onchange="update_selection()"></textarea>
           </div>
           <div class="menu-item-container">
             <span class="montserrat-title">comparison string</span>
@@ -113,7 +114,7 @@
         </div>
       </div>
       <div id="graph">
-        <div id="graph-console" class="montserrat-body">> </div>
+        <div id="graph-console" class="montserrat-body"></div>
       </div>
     </div>
     <script>
@@ -165,6 +166,13 @@
         .attr("viewBox", [-width/2, -height/2, width, height])
         .attr("style", "max-width: 100%; height: auto;");
 
+    svg.call(d3.zoom()
+      .extent([[0, 0], [width, height]])
+      .scaleExtent([1, 8])
+      .on("zoom", zoomed));
+
+    
+
     // Create force simulation
     const simulation = d3.forceSimulation()
         .force("link", d3.forceLink().id(d => d[name]))
@@ -194,6 +202,10 @@
     let grouping = svg.append("g").selectAll(".grouping");
     let node = svg.append("g").selectAll(".node");
     let text = svg.append("g").selectAll(".label");
+
+    function zoomed({transform}) {
+      node.attr("transform", d => `translate(${transform.apply(d)})`);
+    }
 
     //
     // updateGraph this is the d3 rendering and simulation part 
@@ -268,7 +280,7 @@
       // Restart simulation
       simulation.nodes(node_data).on("tick", ticked);
       simulation.force("link").links(filtered_links).strength(.05); //d => max_perplexity/d.perplexity*scale);
-      simulation.force("grouping").links(grouping_links).strength(.07);
+      simulation.force("grouping").links(grouping_links).strength(.5);
       simulation.alpha(1).restart();
 
     }
@@ -360,8 +372,14 @@
 
       // keep a copy of the links and update the link data
       link_data[`group_${source.group}`] = [...(link_data[`group_${source.group}`] ?? []), ...(edges ?? [])];
-      links = JSON.parse(JSON.stringify(link_data));
-
+      links[`group_${source.group}`] = JSON.parse(JSON.stringify([...(link_data[`group_${source.group}`] ?? []), ...(edges ?? [])]));
+      for(const group in links){
+        links[group] = links[group].map((l) => {
+          l.target = l.target[name] ?? l.target;
+          l.source = l.source[name] ?? l.source;
+          return l;
+        });
+      }
       update_graph();
     }
 
@@ -451,8 +469,8 @@
     // updates the selection of anchor nodes.
     // it also manages the directions list.
     function update_selection(){
-
-      let new_selection = document.getElementById('dx10').value;
+    
+      let new_selection = document.getElementById('selected-nodes-text').value;
       if(new_selection == ''){ // if the selection is empty re-initialize everything
         loaded = [];
         node_data = [];
@@ -466,7 +484,8 @@
       
       new_selection = new_selection.split(",").map((id) => id.trim().padEnd(4,'-'));
 
-      document.getElementById('dx10').value = new_selection;
+      document.getElementById('selected-nodes-text').value = new_selection;
+      
 
       let diff = selected_nodes.length - new_selection.length;
             
@@ -488,7 +507,67 @@
         }
       }
 
+      remove_children(document.getElementById('selected-nodes-table'));
+      let thead = document.createElement('thead')
+      let header = document.createElement('tr');
+      let n = document.createElement('th');
+      let d = document.createElement('th');
+      let g = document.createElement('th');
+
+      header.classList += 'node_table_row';
+      n.classList += 'montserrat-body node_table_cell';
+      d.classList += 'montserrat-body node_table_cell';
+      g.classList += 'montserrat-body node_table_cell';
+
+      n.append("name");
+      d.append("direction");
+      g.append("group");
+
+      header.appendChild(n);
+      header.appendChild(d);
+      header.appendChild(g);
+
+      thead.appendChild(header);
+      document.getElementById('selected-nodes-table').appendChild(thead);
+      
+      let tb = document.createElement('tbody');
+      selected_nodes.map((node) => {
+        let container = document.createElement('tr');
+        let name = document.createElement('td');
+        let dir = document.createElement('td');
+        let group = document.createElement('td');
+
+        name.append(node.name);
+        dir.append(decode_direction(node.direction));
+        group.append(node.group);
+
+        container.classList += 'node_table_row';
+        name.classList += 'montserrat-body node_table_cell';
+        dir.classList += 'montserrat-body node_table_cell';
+        group.classList += 'montserrat-body node_table_cell';
+
+        container.appendChild(name);
+        container.appendChild(dir);
+        container.appendChild(group);
+        tb.appendChild(container);
+      });
+
+      document.getElementById('selected-nodes-table').appendChild(tb);
+
       request_graph_data(selected_nodes, "UPDATE_SELECTION");
+    }
+
+    function decode_direction(dir){
+      switch(dir){
+        case 0:
+          return 'both';
+        case 1:
+          return 'out';
+        case 2:
+          return 'in';
+        default:
+          return 'broken';
+      }
     }
 
     // updates the color of the root nodes
@@ -589,7 +668,7 @@
 
     function add_anchor(group){
       selected_nodes.push({name: clicked_node[name], direction: 1, group: group});
-      document.getElementById('dx10').value = selected_nodes.map((node) => node.name).join(',');
+      document.getElementById('selected-nodes-text').value = selected_nodes.map((node) => node.name).join(',');
       update_selection();
       hide_menu(node_drop_down);
     }
@@ -713,7 +792,9 @@
         "scale": scale,
         "coloring": coloring,
         "labeling": labeling,
-        "clicked_node": clicked_node
+        "clicked_node": clicked_node,
+        "grouping_nodes": JSON.parse(JSON.stringify(grouping_nodes)),
+        "grouping_links": JSON.parse(JSON.stringify(grouping_links)),
       };
       return JSON.stringify(state);
     }
@@ -732,14 +813,22 @@
       coloring = state.coloring;
       labeling = state.labeling;
       clicked_node = state.clicked_node;
+      grouping_nodes = state.grouping_nodes;
+      grouping_links = state.grouping_links;
 
-      document.getElementById('dx10').value = selected_nodes.map((node) => node.name).join(",");
+      document.getElementById('selected-nodes-text').value = selected_nodes.map((node) => node.name).join(",");
       document.getElementById('depth').value = depth;
       document.getElementById('comparison').value = comparison;
       document.getElementById('threshold').value = distance_threshold;
       document.getElementById('anchor_color').value = anchor_color;
       document.getElementById('scale').value = scale;
       update_graph();
+    }
+
+    function switch_selected_nodes_view(){
+      let toggle = document.getElementById("change-view").checked;
+      document.getElementById("selected-nodes").style.display = toggle?'block':'none';
+      document.getElementById('selected-nodes-text').style.display = toggle?'none':'block';
     }
     </script>
 </body>
