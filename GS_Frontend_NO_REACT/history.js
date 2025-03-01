@@ -17,7 +17,6 @@ function stack_multi_pop(pops){
     let state = JSON.parse(state_stack[state_stack.length-1]['state']);
     console.log(`${state_stack[state_stack.length-1]['display']}: `, state);
     set_state(state);
-    console.log(JSON.parse(get_state()));
 }
 
 ///////////// DOM INTERACTIONS ////////////////
