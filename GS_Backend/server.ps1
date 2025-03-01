@@ -9,8 +9,9 @@ $ENV:ING_NODES=$nodes
 $ENV:ING_EDGES=$edges
 $ENV:ING_NAMES=$names
 
-echo $ENV:ING_NODES
-echo $ENV:ING_EDGES
-echo $ENV:ING_NAMES
+echo "NODE FILE: " $ENV:ING_NODES
+echo "EDGE FILE: " $ENV:ING_EDGES
+echo "COLU NAME: " $ENV:ING_NAMES
+echo "SERV PORT: " $port 
 
 fastapi dev --port $port ./src/main.py 
