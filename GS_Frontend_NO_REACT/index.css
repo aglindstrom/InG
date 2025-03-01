@@ -143,6 +143,10 @@ input{
   color: var(--font-color-1);
 }
 
+.title-case{
+  text-transform: capitalize;
+}
+
 .montserrat-body{
   font-family: "Montserrat", serif;
   font-optical-sizing: auto;
@@ -165,6 +169,65 @@ input{
   box-shadow: -5em 0 .25em 5em rgba(0,0,0,.2),
                0em 0 .5em 0em rgba(239,239,239,.5) inset;
   z-index: 2;
+}
+
+#graph{
+  width: 80vw;
+  height: 101vh;
+  background-color: var(--graph-bg-color);
+  background-image: linear-gradient(var(--grid-lines-color) 1%, transparent 1%, transparent 49.33%, var(--grid-lines-color) 49.33%, var(--grid-lines-color) 50.66%, transparent 50.66%),
+                    linear-gradient(90deg, var(--grid-lines-color) 1%, transparent 1%, transparent 49.33%, var(--grid-lines-color) 49.33%, var(--grid-lines-color) 50.66%, transparent 50.66%);
+  background-position: 2.5em 2.5em; 
+  background-size: 5em 5em;
+}
+
+#graph-console{
+  width: 100%;
+  height: .5em;
+  padding: 0em .5em;
+  position: absolute;
+  bottom: 1em;
+}
+
+#node-selector{
+  width: 100%;
+  height: 50%;
+}
+
+#node-options{
+  padding: 2px;
+  width: 100%;
+  height: 25%;
+}
+
+#out{
+  visibility: hidden;
+}
+
+#doc-display{
+  flex-basis: 1;
+  width: 50%;
+  align-items: center;
+  overflow-y: scroll;
+  padding: .1em 1em;
+  background-color: var(--text-box-bg-color);
+}
+
+#drop-zone{
+  width: 75%;
+  height: 75%;
+  padding: 2em;
+  border: 2em solid var(--font-color-1);
+  border-radius: 4em;
+  background-color: var(--bg-color-1);
+}
+
+.word{
+  opacity: .5;
+}
+
+.word:hover{
+  opacity: 1;
 }
 
 .drop-down{
@@ -202,7 +265,7 @@ input{
 }
 
 .menu-item-container{
-  width: 20.5em;
+  width: 90%;
   margin: .5em;
 }
 
