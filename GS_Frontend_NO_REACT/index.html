@@ -396,9 +396,7 @@
       link_ids = link_ids.map((link) => [link.source.id ?? link.source, link.target.id ?? link.target]);
       link_ids = link_ids.flat();
 
-      console.log("unload_nodes[before]: ", node_data);
       node_data = node_data.filter((node) => link_ids.includes(node));
-      console.log("unload_nodes: ", node_data)
     }
 
 // ---------------------- Grouping ---------------------- //
@@ -607,7 +605,7 @@
 
       if(coloring == 1){
         // TODO: Add a function that updates node coloring parameters
-        console.log("UPDATE COMPARISON: coloring == 1")
+        console.log("UPDATE COMPARISON: coloring == 1");
       }
 
       state_push(get_state(), "UPDATE COMPARISON");
