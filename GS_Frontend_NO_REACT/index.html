@@ -488,7 +488,7 @@
             
       if(diff < 0){ // check if a node was added to the list
         for(let i = 0, j = 0; diff != 0; i++, j++){
-          if((selected_nodes[i] ?? {name:''}).name  == new_selection[j]){ continue; }
+          if(selected_nodes[i]?.name  == new_selection[j]){ continue; }
           selected_nodes.splice(j, 0, {name: new_selection[j],
                                   direction: 1,
                                   group: 0,});
@@ -664,10 +664,15 @@
     }
 
     function add_anchor(group){
-      selected_nodes.push({name: clicked_node[name], direction: 1, group: group});
+      select_node({name: clicked_node[name], direction: 1, group: group});
+
+      hide_menu(node_drop_down);
+    }
+
+    function select_node(node){
+      selected_nodes.push(node);
       document.getElementById('selected-nodes-text').value = selected_nodes.map((node) => node.name).join(',');
       update_selection();
-      hide_menu(node_drop_down);
     }
 
     // node click handler for right click
