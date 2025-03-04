@@ -11,6 +11,8 @@
   --toggle-height: 1em;
   --toggle-width: 2em;
   --toggle-border-width: .1em;
+
+  --box-std-width: 90%;
 }
 
 
@@ -124,7 +126,7 @@ input{
 #selected-nodes{
   display:none;
   font-size: 12pt;
-  width: 22.6em;
+  width: 100%;
   height: 8.6em;
   overflow-y: scroll;
   overflow-x: hidden;
@@ -226,6 +228,10 @@ input{
   opacity: .5;
 }
 
+.word.active{
+  opacity: 1;
+}
+
 .word:hover{
   opacity: 1;
 }
@@ -265,7 +271,7 @@ input{
 }
 
 .menu-item-container{
-  width: 90%;
+  width: var(--box-std-width);
   margin: .5em;
 }
 
@@ -273,7 +279,7 @@ input{
   resize: vertical;
   background-color: var(--text-box-bg-color);
   height: 8em;
-  width: 22em;
+  width: var(--box-std-width);
   overflow-y: scroll;
   overflow-x: hidden;
   border-radius: var(--standard-radius);
