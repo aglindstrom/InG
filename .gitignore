@@ -1,7 +1,8 @@
 __*__
 package-lock.json
+node_modules
 
-GS_Backend/data/*
+GS_Backend/data
 
 *.csv
 *.csv.gz
