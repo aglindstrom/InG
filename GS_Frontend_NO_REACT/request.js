@@ -60,6 +60,5 @@ function get_url(node){
     let directions = node.direction;
     let params = new URLSearchParams({codes: codes, depth: depth, directions: directions});
     let url = `${invokeURL}:${graph_sources[node.group].port}/api/graph?${params.toString()}`;
-    console.log(url);
     return url;
 }

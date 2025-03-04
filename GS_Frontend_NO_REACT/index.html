@@ -214,7 +214,6 @@
     // updateGraph this is the d3 rendering and simulation part 
     //
     function update_graph() {
-      console.log("UPDATE GRAPH");
       // Filter nodes and links based on selectedNodeIds
       if(!node_data) return;
 
@@ -360,7 +359,6 @@
         }
       });
 
-      console.log("update_nodes: ", node_data);
 
       // add groups to the edges for coloring
       // based on data source 
@@ -423,7 +421,6 @@
 
     function group_children(anchor_name){
       let node = selected_nodes.filter((node) => node.name == anchor_name)[0];
-      console.log(node);
       grouping_nodes.push(...node.children);
 
       update_grouping_nodes();
@@ -437,7 +434,6 @@
       );
 
       Promise.all(requests).then(() => {
-        console.log("update_grouping_nodes: ", grouping_links);
         grouping_links = [... new Set(grouping_links)] ?? []; // remove duplicates
         state_push(get_state(), `GROUP_NODES: ${clicked_node[name]}`);
         update_graph();
