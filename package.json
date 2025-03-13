@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "frontend": "npx http-server gs_frontend_no_react"
+    "potter_front": "npx http-server GS_Frontend_NO_REACT",
+    "potter_back": "powershell .\\GS_Backend\\server.ps1",
   },
   "author": "",
   "license": "ISC",
