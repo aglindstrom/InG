@@ -254,7 +254,7 @@
           .attr("dx", 0)
           .attr("dy", 3.5)
           .merge(text);
-      text.text(d => get_label(d).slice(0,7));
+      text.text(d => get_label(d)?.slice(0,7));
 
       // Update links
       link = link.data(filtered_links, d => d.source[name] + "-" + d.target[name]);
