@@ -21,9 +21,10 @@ function drop_handler(event){
             doc_display.removeChild(doc_display.firstChild);
         }
         const doc = reader.result;
-        const doc_split = doc.split(/\s+/).map((word) => {
+        const doc_split = doc.split(/\s+/)
+        const doc_spanned = doc_split.map((word) => {
             let span = document.createElement('span');
-                span.appendChild(document.createTextNode(word));
+                span.appendChild(document.createTextNode(word + ' '));
                 span.classList += "word";
             return span;
         });
@@ -35,14 +36,27 @@ function drop_handler(event){
 
         // add document text
         doc_display.appendChild(document.createElement('br'));
-        doc_split.forEach((node) => {
-            doc_display.appendChild(document.createElement('br'));
+        doc_spanned.forEach((node) => {
             doc_display.appendChild(node);
         });
 
-        const entities = extract_entities(doc);
-        highlight(doc_display, entities);
-        select_entity_nodes(entities);
+        return extract_entities(doc_split)
+            .then((entities) => {
+                let out = {};
+                let edges = [];
+                entities = entities.filter((entity) => entity !== 'NE:Clinical_event:presented');
+                const codes = entities.map((entity) => encode_entity(entity));
+                Promise.all(codes)
+                    .then((codes) => {
+                        edges = create_entity_edges(codes);
+                        out = {nodes:[... new Set(codes.map((code) => [code.entity, ...code?.data]).flat(Infinity))].map((node) => ({dx10: node})), edges: [... new Set(edges.flat(Infinity))]};
+                        console.log(out);
+                        link_data['group_0'] = out.edges;
+                        node_data = out.nodes;
+                        update_graph();
+                    });
+                
+            });
     }
 
     reader.readAsText(files[0]);
@@ -52,6 +66,7 @@ function drop_handler(event){
 function drag_over_handler(event){
     event.preventDefault();
 }
+
 
 function highlight(element, entities){
     const children = [...element.children];
@@ -75,19 +90,38 @@ function highlight(element, entities){
     });
 }
 
-function extract_entities(data){
-    // TODO: Fetch from entity extractor 
 
-    //PLACEHOLDER//
-    const group = 1;
-    const direction = 1;
-    const data_s = data.split(/\s+/);
-    const data_f = data_s.filter(() => Math.random() > .75);
-    const data_out = data_f.map((d, idx) => ({entity: d, node:{name: idx, direction:direction, group:group}}));
+async function extract_entities(data){
+    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/VT-NE/VT:${data.join('%20')}`;
+    console.log(url);
+
+    let data_out = await fetch(url)
+        .then((resp) => resp.json())
+        .then((data) => data)
+        .catch((error) => console.error("Extract_Entities ", error));
+
+    console.log(data_out);
     return data_out;
 }
 
-function select_entity_nodes(entities){
 
+async function encode_entity(entity){
+    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/NE-DX/${entity.split(' ').join('%20')}?topk=20`;
+    console.log(url);
+
+    let data_out = await fetch(url)
+        .then((resp) => resp.json())
+        .then((data) => ({entity: entity, data: data}))
+        .catch((error) => console.error("Encode_Entity ", error));
+
+    console.log(data_out);
+    return data_out;
+}
+
+function create_entity_edges(entities){
+    return entities.map((entity) => entity.data?.map((code) => ({source: entity.entity, target: code, perplexity: '0', group: 0})));
+}
+
+function select_entity_nodes(entities){
     entities.forEach((e) => select_node({name: e.node.name, direction: e.node.direction, group: e.node.group}));
 }
