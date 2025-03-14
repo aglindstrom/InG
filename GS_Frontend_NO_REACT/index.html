@@ -152,12 +152,12 @@
     let links = {};
 
     // graph data
-    let loaded = [];      // list of node names that are currently loaded 
-    let node_data = [];   // all the nodes
-    let link_data = {};   // all the links
-    let grouping_nodes = [];
-    let grouping_links = [];
-    let selected_nodes = [];
+    let loaded = [];          // list of node names that are currently loaded 
+    let node_data = [];       // all the nodes
+    let link_data = {};       // all the links
+    let grouping_nodes = [];  // list of nodes used to do simulation grouping
+    let grouping_links = [];  // list of links used to do simulation grouping
+    let selected_nodes = [];  // list of anchor nodes 
 
     const init_state = get_state();
     state_push(init_state, "INITIALIZE");
