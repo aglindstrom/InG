@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "potter-front": "npx http-server GS_Frontend_NO_REACT",
-    "potter-back": "powershell .\\GS_Backend\\server.ps1"
+    "potter-back": "powershell ./GS_Backend/server.ps1"
   },
   "author": "",
   "license": "ISC",

@@ -14,4 +14,4 @@ Write-Output "EDGE FILE: " $ENV:ING_EDGES
 Write-Output "COLU NAME: " $ENV:ING_NAMES
 Write-Output "SERV PORT: " $port
 
-fastapi dev --port $port ./src/main.py 
+fastapi dev --port $port ./GS_Backend/src/main.py
