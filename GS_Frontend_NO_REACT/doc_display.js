@@ -22,40 +22,36 @@ function drop_handler(event){
         }
         const doc = reader.result;
         const doc_split = doc.split(/\s+/)
-        const doc_spanned = doc_split.map((word) => {
-            let span = document.createElement('span');
-                span.appendChild(document.createTextNode(word + ' '));
-                span.classList += "word";
-            return span;
-        });
         // create Header with filename
-        let span = document.createElement('span');
-        span.className += 'montserrat-title title-case';
-        span.appendChild(document.createTextNode(files[0].name.split('.')[0]));
-        doc_display.appendChild(span);
+        let title_span = document.createElement('span');
+        title_span.className += 'montserrat-title title-case';
+        title_span.appendChild(document.createTextNode(files[0].name.split('.')[0]));
 
-        // add document text
+        let doc_span = document.createElement('span');
+        doc_span.className += 'montserrat-body';
+        doc_span.appendChild(document.createTextNode(doc));
+
+        doc_display.appendChild(title_span);
         doc_display.appendChild(document.createElement('br'));
-        doc_spanned.forEach((node) => {
-            doc_display.appendChild(node);
-        });
+        doc_display.appendChild(doc_span);
 
         return extract_entities(doc_split)
             .then((entities) => {
                 let out = {};
                 let edges = [];
-                entities = entities.filter((entity) => entity !== 'NE:Clinical_event:presented');
                 const codes = entities.map((entity) => encode_entity(entity));
+                highlight(doc_span, entities);
                 Promise.all(codes)
                     .then((codes) => {
                         edges = create_entity_edges(codes);
-                        out = {nodes:[... new Set(codes.map((code) => [code.entity, ...code?.data]).flat(Infinity))].map((node) => ({dx10: node})), edges: [... new Set(edges.flat(Infinity))]};
-                        console.log(out);
-                        link_data['group_0'] = out.edges;
-                        node_data = out.nodes;
+                        out = {nodes: [... new Set(codes.map((code) => [code.entity, ...code?.data]).flat(Infinity))].map((node) => ({dx10: node})),
+                               edges: [... new Set(edges.flat(Infinity))]};
+                        if(!link_data['group_0']){ link_data['group_0'] = [];}
+                        link_data['group_0'].push(...out.edges);
+                        node_data.push(...out.nodes);
+                        loaded.push(...out.nodes.map((node) => node['dx10']));
                         update_graph();
                     });
-                
             });
     }
 
@@ -69,24 +65,23 @@ function drag_over_handler(event){
 
 
 function highlight(element, entities){
-    const children = [...element.children];
-    console.log(entities);
-    const words = children.filter((child) => 
-                  child.nodeName.toLowerCase() === 'span' && 
-                  child.className.includes('word'));
+    let doc_text = element.textContent;
+    const names = entities.map((entity) => entity.split(':').at(-1));
+    element.textContent = "";
+    names.forEach((name, idx) => {
+        let split = doc_text.split(name, 2);
+        doc_text = split.at(-1);
 
-    const isEntity = (word) => {
-        const idx = entities.indexOf(...entities.filter((e) => e.entity === word));
-        return idx;
-    }
+        let word_span = document.createElement('span');
+        word_span.classList.add('word');
+        word_span.textContent = split[0];
+        element.appendChild(word_span);
 
-    words.forEach((word) => {
-        const idx = isEntity(word.textContent);
-        if(idx != -1){
-            const title = `entity node: ${entities[idx].node.name}`
-            word.classList.add('active');
-            word.title = title;
-        }
+        let name_span = document.createElement('span');
+        name_span.classList.add(...['word', 'active']);
+        name_span.title = entities[idx];
+        name_span.textContent = name;
+        element.appendChild(name_span);
     });
 }
 
@@ -100,7 +95,6 @@ async function extract_entities(data){
         .then((data) => data)
         .catch((error) => console.error("Extract_Entities ", error));
 
-    console.log(data_out);
     return data_out;
 }
 
@@ -111,10 +105,9 @@ async function encode_entity(entity){
 
     let data_out = await fetch(url)
         .then((resp) => resp.json())
-        .then((data) => ({entity: entity, data: data}))
+        .then((data) => ({entity: entity, data: data.map((entry) => entry.slice(3, 7))}))
         .catch((error) => console.error("Encode_Entity ", error));
 
-    console.log(data_out);
     return data_out;
 }
 
