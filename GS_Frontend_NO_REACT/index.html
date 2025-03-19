@@ -34,86 +34,86 @@
       <div class="collapseable">
         <input type="checkbox" class="hide-button" onchange='update_svg_size()'/>
         <div class="node-list-menu collapse-h">
-        <div id="node-options">
-          <div class="menu-item-container">
-            <div>
-              <label class="montserrat-title" for="anchor_color">anchor color</label>
-              <input id="anchor_color" type="color" value="#000000" onchange=""/>
+          <div id="node-options">
+            <div class="menu-item-container">
+              <div>
+                <label class="montserrat-title" for="anchor_color">anchor color</label>
+                <input id="anchor_color" type="color" value="#000000" onchange=""/>
+              </div>
+              <div>
+                <label class="montserrat-title" for="node_color">node color</label>
+                <input id="node_color" type="color" value="#5a5a5a" onchange="update_node_color()"/>
+              </div>
             </div>
-            <div>
-              <label class="montserrat-title" for="node_color">node color</label>
-              <input id="node_color" type="color" value="#5a5a5a" onchange="update_node_color()"/>
-            </div>
-          </div>
 
-          <hr/>
+            <hr/>
 
-          <div class="menu-item-container" style="width:50%">
-            <div style="display:flex; justify-content: space-between;">
-              <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
-              <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
+            <div class="menu-item-container" style="width:50%">
+              <div style="display:flex; justify-content: space-between;">
+                <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
+                <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
+              </div>
+              <div style="display:flex; justify-content: space-between;">
+                <label style="flex-basis:1;" class="montserrat-title" for="threshold">threshold</label>
+                <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
+              </div>
+              <div style="display:flex; justify-content: space-between;">
+                <label style="flex-basis:1;" class="montserrat-title" for="scale">scale</label>
+                <input id="scale" class="number" type="number" min="0" value=".01" step=".01" onchange="update_scale()"/>
+              </div>
             </div>
-            <div style="display:flex; justify-content: space-between;">
-              <label style="flex-basis:1;" class="montserrat-title" for="threshold">threshold</label>
-              <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
-            </div>
-            <div style="display:flex; justify-content: space-between;">
-              <label style="flex-basis:1;" class="montserrat-title" for="scale">scale</label>
-              <input id="scale" class="number" type="number" min="0" value=".01" step=".01" onchange="update_scale()"/>
-            </div>
-          </div>
 
-          <hr/>
+            <hr/>
 
-          <fieldset class="menu-item-container">
-            <legend class="montserrat-title">Coloring</legend>
-            <div>
-              <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
-              <label for="ratio" class="montserrat-body">ratio</label>
-            </div>
-            <div>
-              <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
-              <label for="cossim" class="montserrat-body">cossim</label>
-            </div>
-          </fieldset>
-          <fieldset class="menu-item-container">
-            <legend class="montserrat-title">Labeling</legend>
-            <div>
-              <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
-              <label for="text" class="montserrat-body">DX10</label>
-            </div>
-            <div>
-              <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
-              <label for="similarity" class="montserrat-body">similarity</label>
-            </div>
-          </fieldset>
+            <fieldset class="menu-item-container">
+              <legend class="montserrat-title">Coloring</legend>
+              <div>
+                <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
+                <label for="ratio" class="montserrat-body">ratio</label>
+              </div>
+              <div>
+                <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
+                <label for="cossim" class="montserrat-body">cossim</label>
+              </div>
+            </fieldset>
+            <fieldset class="menu-item-container">
+              <legend class="montserrat-title">Labeling</legend>
+              <div>
+                <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
+                <label for="text" class="montserrat-body">DX10</label>
+              </div>
+              <div>
+                <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
+                <label for="similarity" class="montserrat-body">similarity</label>
+              </div>
+            </fieldset>
 
-          <hr/>
-          <div class="menu-item-container">
-            <span class="montserrat-title">selection
-              <input id="change-view" type="checkbox" onclick="switch_selected_nodes_view()"/>
-              <label for="change-view" id="change-view-label"></label>
-            </span>
-            <div id="selected-nodes" class="montserrat-body">
-              <table id="selected-nodes-table" class="node_table montserrat-body">
-              </table>
+            <hr/>
+            <div class="menu-item-container">
+              <span class="montserrat-title">selection
+                <input id="change-view" type="checkbox" onclick="switch_selected_nodes_view()"/>
+                <label for="change-view" id="change-view-label"></label>
+              </span>
+              <div id="selected-nodes" class="montserrat-body">
+                <table id="selected-nodes-table" class="node_table montserrat-body">
+                </table>
+              </div>
+              <textarea id="selected-nodes-text" class="text-box montserrat-body" style="display:block;" placeholder="dx10 codes" onchange="update_selection()"></textarea>
             </div>
-            <textarea id="selected-nodes-text" class="text-box montserrat-body" style="display:block;" placeholder="dx10 codes" onchange="update_selection()"></textarea>
-          </div>
-          <div class="menu-item-container">
-            <span class="montserrat-title">comparison string</span>
-            <div>
-              <textarea id="comparison" class="text-box montserrat-body" placeholder="comparison string" value="Certain infectious and parasitic diseases (A00-B99)" onchange="update_comparison()" rows="10"></textarea>
+            <div class="menu-item-container">
+              <span class="montserrat-title">comparison string</span>
+              <div>
+                <textarea id="comparison" class="text-box montserrat-body" placeholder="comparison string" value="Certain infectious and parasitic diseases (A00-B99)" onchange="update_comparison()" rows="10"></textarea>
+              </div>
             </div>
-          </div>
-          <div class="menu-item-container">
-            <span class="montserrat-title">state stack</span>
-            <div id = "state_stack" class = "text-box montserrat-body">
+            <div class="menu-item-container">
+              <span class="montserrat-title">state stack</span>
+              <div id = "state_stack" class = "text-box montserrat-body">
+              </div>
             </div>
-          </div>
 
-          <hr/>
-          
+            <hr/>
+            
           </div>
         </div>
       </div>
