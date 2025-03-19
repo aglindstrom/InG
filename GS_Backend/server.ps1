@@ -1,6 +1,6 @@
 param(
-  [string]$nodes = './data/ICD10CM,length=4.csv.gz',
-  [string]$edges = './data/DgPg-GenIndFwd,top_p=0.1.csv.gz',
+  [string]$nodes = './GS_Backend/data/ICD10CM,length=4.csv.gz',
+  [string]$edges = './GS_Backend/data/DgPg-GenIndFwd,top_p=0.1.csv.gz',
   [string]$names = 'dx10',
   [string]$port = '8000'
 )
