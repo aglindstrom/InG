@@ -5,6 +5,7 @@
   --grid-lines-color: #dedede;
 
   --font-color-1: #232323;
+  --font-highlight-color-1: #A7C6DA;
 
   --standard-radius: 5px;
 
@@ -135,6 +136,59 @@ input{
 }
 
 /* CLASSES */
+.collapseable{
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--bg-color-1);
+  box-shadow: -5em 0 .25em 5em rgba(0,0,0,.2),
+               0em 0 .5em 0em rgba(239,239,239,.5) inset;
+  z-index: 2;
+}
+
+.hide-button{
+  -webkit-appearance: none;
+  appearance: none;
+  transform: rotate(45deg);
+  border-radius: 0;
+  width: .5em;
+  height: .5em;
+  position: relative;
+
+  border-top: none;
+  border-right: none;
+  border-left: .125em solid var(--font-color-1);
+  border-bottom: .125em solid var(--font-color-1);
+  left: .15em;
+}
+
+.hide-button:active{
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hide-button:checked{
+  border-top: .125em solid var(--font-color-1);
+  border-right: .125em solid var(--font-color-1);
+  border-left: none;
+  border-bottom: none;
+  left: -.15em;
+}
+
+.hide-button-container{
+  width: 1em;
+  height: 100%;
+}
+
+.collapse-h{
+  display: block;
+}
+
+.hide-button:checked ~ .collapse-h {
+  display: none;
+}
+
 .montserrat-title{
   font-family: "Montserrat", serif;
   font-optical-sizing: auto;
@@ -168,9 +222,6 @@ input{
   width: 20vw;
   height: 101vh;
   background-color: var(--bg-color-1);
-  box-shadow: -5em 0 .25em 5em rgba(0,0,0,.2),
-               0em 0 .5em 0em rgba(239,239,239,.5) inset;
-  z-index: 2;
 }
 
 #graph{
@@ -232,8 +283,8 @@ input{
   opacity: 1;
 }
 
-.word:hover{
-  opacity: 1;
+.word.active:hover{
+  background-color: var(--font-highlight-color-1);
 }
 
 .drop-down{
@@ -311,6 +362,9 @@ input{
 }
 
 .node_table_cell{
+  max-width: 5em;
+  overflow-x: scroll;
+  overflow-y: hidden;
   border-right: 1px solid var(--font-color-1);
   border-left: 1px solid var(--font-color-1);
   height: 2em;
