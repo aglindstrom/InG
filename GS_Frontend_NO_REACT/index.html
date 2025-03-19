@@ -27,11 +27,13 @@
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
     </div>
     <div id="node-drop-down" class="drop-down">
-      <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div>
+      <!-- <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div> -->
     </div>
     <div class="app-container">
-      <div class="node-list-menu">
+      <div class="collapseable">
+        <input type="checkbox" class="hide-button" onchange='update_svg_size()'/>
+        <div class="node-list-menu collapse-h">
         <div id="node-options">
           <div class="menu-item-container">
             <div>
@@ -112,6 +114,7 @@
 
           <hr/>
           
+          </div>
         </div>
       </div>
       <div id="doc-display" class="montserrat-body" ondrop="drop_handler(event);" ondragover="drag_over_handler(event);">
@@ -123,8 +126,8 @@
 
     // constants
     const context = document.getElementById("graph");
-    const width = context.scrollWidth;   // working width and height for the simulation
-    const height = context.scrollHeight; //
+    let width = context.scrollWidth;   // working width and height for the simulation
+    let height = context.scrollHeight; //
     const padding = 20;
     const drop_down = document.getElementById("drop-down");           // the dropdown menu for right click
     const node_drop_down = document.getElementById("node-drop-down"); // the dropdown menu for node clicks
@@ -164,17 +167,10 @@
 
     // Create SVG
     const svg = d3.select("#graph").append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("viewBox", [-width/2, -height/2, width, height])
-        .attr("style", "max-width: 100%; height: auto;");
-
-    svg.call(d3.zoom()
-      .extent([[0, 0], [width, height]])
-      .scaleExtent([1, 8])
-      .on("zoom", zoomed));
-
-    
+        // .attr("width", width)
+        // .attr("height", height)
+        .attr("preserveAspectRatio", "xMaxYMax slice")
+        .attr("viewBox", [-width/2, -height/2, width, height]);
 
     // Create force simulation
     const simulation = d3.forceSimulation()
@@ -241,7 +237,7 @@
       node.append("title")
           .text( d => d[name] );
 
-      d3.selectAll("rect").attr("fill", d => { d.equiv = .5; //similarity(d);
+      d3.selectAll("rect").attr("fill", d => { d.equiv = .5;          //similarity(d);
             return (is_anchor(d[name]))? anchor_color: node_color;}); //color((1-d.equiv)*scale);});
       
       // Update lables
@@ -353,6 +349,7 @@
           node.parents = [source.name];
         }else{
           let child = node_data.filter((n) => n[name] == node[name])[0];
+          if(!child.parents){child.parents = [];}
           source.children.push(child);
           child.parents.push(source.name);
           child.parents = [...new Set(child.parents)];
@@ -448,6 +445,12 @@
       update_graph();
     }
 
+    function update_svg_size(){
+      width = context.scrollWidth;   // working width and height for the simulation
+      height = context.scrollHeight; //
+      svg.setAttribute('viewBox', [-width/2, -height/2, width, height]);
+    }
+
     // updates the edge weight threshold
     function update_threshold(){
       distance_threshold = document.getElementById("threshold").value;
@@ -480,9 +483,7 @@
       }
       
       new_selection = new_selection.split(",").map((id) => id.trim().padEnd(4,'-'));
-
       document.getElementById('selected-nodes-text').value = new_selection;
-      
 
       let diff = selected_nodes.length - new_selection.length;
             
@@ -504,54 +505,8 @@
         }
       }
 
-      remove_children(document.getElementById('selected-nodes-table'));
-      let thead = document.createElement('thead')
-      let header = document.createElement('tr');
-      let n = document.createElement('th');
-      let d = document.createElement('th');
-      let g = document.createElement('th');
-
-      header.classList += 'node_table_row';
-      n.classList += 'montserrat-body node_table_cell';
-      d.classList += 'montserrat-body node_table_cell';
-      g.classList += 'montserrat-body node_table_cell';
-
-      n.append("name");
-      d.append("direction");
-      g.append("group");
-
-      header.appendChild(n);
-      header.appendChild(d);
-      header.appendChild(g);
-
-      thead.appendChild(header);
-      document.getElementById('selected-nodes-table').appendChild(thead);
+      update_node_table();
       
-      let tb = document.createElement('tbody');
-      selected_nodes.map((node) => {
-        let container = document.createElement('tr');
-        let name = document.createElement('td');
-        let dir = document.createElement('td');
-        let group = document.createElement('td');
-
-        name.append(node.name);
-        dir.append(decode_direction(node.direction));
-        group.append(node.group);
-
-        container.classList += 'node_table_row';
-        name.classList += 'montserrat-body node_table_cell';
-        dir.classList += 'montserrat-body node_table_cell';
-        group.classList += 'montserrat-body node_table_cell';
-
-        container.appendChild(name);
-        container.appendChild(dir);
-        container.appendChild(group);
-        tb.appendChild(container);
-      });
-
-      document.getElementById('selected-nodes-table').appendChild(tb);
-
-      request_graph_data(selected_nodes, "UPDATE_SELECTION");
     }
 
     function decode_direction(dir){
@@ -831,6 +786,57 @@
       let toggle = document.getElementById("change-view").checked;
       document.getElementById("selected-nodes").style.display = toggle?'block':'none';
       document.getElementById('selected-nodes-text').style.display = toggle?'none':'block';
+    }
+
+    function update_node_table(){
+      remove_children(document.getElementById('selected-nodes-table'));
+      let thead = document.createElement('thead')
+      let header = document.createElement('tr');
+      let n = document.createElement('th');
+      let d = document.createElement('th');
+      let g = document.createElement('th');
+
+      header.classList += 'node_table_row';
+      n.classList += 'montserrat-body node_table_cell';
+      d.classList += 'montserrat-body node_table_cell';
+      g.classList += 'montserrat-body node_table_cell';
+
+      n.append("name");
+      d.append("direction");
+      g.append("group");
+
+      header.appendChild(n);
+      header.appendChild(d);
+      header.appendChild(g);
+
+      thead.appendChild(header);
+      document.getElementById('selected-nodes-table').appendChild(thead);
+      
+      let tb = document.createElement('tbody');
+      selected_nodes.map((node) => {
+        let container = document.createElement('tr');
+        let name = document.createElement('td');
+        let dir = document.createElement('td');
+        let group = document.createElement('td');
+
+        name.append(node.name);
+        dir.append(decode_direction(node.direction));
+        group.append(node.group);
+
+        container.classList += 'node_table_row';
+        name.classList += 'montserrat-body node_table_cell';
+        dir.classList += 'montserrat-body node_table_cell';
+        group.classList += 'montserrat-body node_table_cell';
+
+        container.appendChild(name);
+        container.appendChild(dir);
+        container.appendChild(group);
+        tb.appendChild(container);
+      });
+
+      document.getElementById('selected-nodes-table').appendChild(tb);
+
+      request_graph_data(selected_nodes, "UPDATE_SELECTION");
     }
     </script>
 </body>
