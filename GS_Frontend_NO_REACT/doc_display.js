@@ -39,12 +39,17 @@ function drop_handler(event){
             .then((entities) => {
                 let out = {};
                 let edges = [];
-                const codes = entities.map((entity) => encode_entity(entity));
+                const req_ent = entities.filter((entity) => entity.split(':')[1] !== 'Clinical_event');
+                const code_requests = req_ent.map((entity) => encode_entity(entity));
                 highlight(doc_span, entities);
-                Promise.all(codes)
-                    .then((codes) => {
+                Promise.allSettled(code_requests)
+                    .then((code_list) => {
+                        let codes = [...code_list.map((code) => code.status === 'fulfilled'? code.value: []).flat(Infinity)];
+                        state_push(get_state(), 'GET ENTITIES');
+                        codes = codes.map((code) => ({entity: {name: code.entity.split(':'), dx10: code.entity.split(':').at(-1)}, 
+                                                      data: code.data.map((node) => ({name: node.split(':'), dx10: node.split(':').at(-1)})) }) );
                         edges = create_entity_edges(codes);
-                        out = {nodes: [... new Set(codes.map((code) => [code.entity, ...code?.data]).flat(Infinity))].map((node) => ({dx10: node})),
+                        out = {nodes: [... new Set(codes.map((code) => [code.entity, ...code?.data]).flat(Infinity))],
                                edges: [... new Set(edges.flat(Infinity))]};
                         if(!link_data['group_0']){ link_data['group_0'] = [];}
                         link_data['group_0'].push(...out.edges);
@@ -73,12 +78,12 @@ function highlight(element, entities){
         doc_text = split.at(-1);
 
         let word_span = document.createElement('span');
-        word_span.classList.add('word');
+        word_span.classList.add(...['word', 'montserrat-body']);
         word_span.textContent = split[0];
         element.appendChild(word_span);
 
         let name_span = document.createElement('span');
-        name_span.classList.add(...['word', 'active']);
+        name_span.classList.add(...['word', 'active', 'montserrat-body']);
         name_span.title = entities[idx];
         name_span.textContent = name;
         element.appendChild(name_span);
@@ -100,19 +105,19 @@ async function extract_entities(data){
 
 
 async function encode_entity(entity){
-    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/NE-DX/${entity.split(' ').join('%20')}?topk=20`;
+    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/NE-DX/${entity.split(' ').join('%20')}?topk=${topk}`;
     console.log(url);
 
     let data_out = await fetch(url)
         .then((resp) => resp.json())
-        .then((data) => ({entity: entity, data: data.map((entry) => entry.slice(3, 7))}))
+        .then((data) => ({entity: entity, data: data.map((node) => node.padEnd(7, '-'))}))
         .catch((error) => console.error("Encode_Entity ", error));
 
     return data_out;
 }
 
 function create_entity_edges(entities){
-    return entities.map((entity) => entity.data?.map((code) => ({source: entity.entity, target: code, perplexity: '0', group: 0})));
+    return entities.map((entity) => entity.data?.map((code) => ({source: entity.entity.dx10, target: code.dx10, perplexity: '0', group: 0})));
 }
 
 function select_entity_nodes(entities){
