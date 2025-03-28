@@ -27,11 +27,11 @@
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
     </div>
     <div id="node-drop-down" class="drop-down">
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div>
-      <!-- <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div> -->
     </div>
     <div class="app-container">
-      <div class="collapseable">
+      <div class="collapsible background-color-1" style="z-index: 2;">
         <input type="checkbox" class="hide-button" onchange='update_svg_size()'/>
         <div class="node-list-menu collapse-h">
           <div id="node-options">
@@ -48,7 +48,7 @@
 
             <hr/>
 
-            <div class="menu-item-container" style="width:50%">
+            <div class="menu-item-container">
               <div style="display:flex; justify-content: space-between;">
                 <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
                 <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
@@ -60,6 +60,10 @@
               <div style="display:flex; justify-content: space-between;">
                 <label style="flex-basis:1;" class="montserrat-title" for="scale">scale</label>
                 <input id="scale" class="number" type="number" min="0" value=".01" step=".01" onchange="update_scale()"/>
+              </div>
+              <div style="display:flex; justify-content: space-between;">
+                <label style="flex-basis:1;" class="montserrat-title" for="scale">topk</label>
+                <input id="topk" class="number" type="number" min="0" value="20" step="1" onchange="update_topk()"/>
               </div>
             </div>
 
@@ -78,6 +82,11 @@
             </fieldset>
             <fieldset class="menu-item-container">
               <legend class="montserrat-title">Labeling</legend>
+              <span class="montserrat-body slide-toggle-container"> show node labels 
+                <input id="label-view" class="slide-toggle" type="checkbox" checked="true" onchange="update_graph()"/>
+                <label for="label-view" class="slide-toggle-label"></label>
+              </span>
+              <!--
               <div>
                 <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
                 <label for="text" class="montserrat-body">DX10</label>
@@ -86,13 +95,14 @@
                 <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
                 <label for="similarity" class="montserrat-body">similarity</label>
               </div>
+              -->
             </fieldset>
 
             <hr/>
             <div class="menu-item-container">
-              <span class="montserrat-title">selection
-                <input id="change-view" type="checkbox" onclick="switch_selected_nodes_view()"/>
-                <label for="change-view" id="change-view-label"></label>
+              <span class="montserrat-title slide-toggle-container"> selection
+                <input id="change-view" class="slide-toggle" type="checkbox" onclick="switch_selected_nodes_view()"/>
+                <label for="change-view" id="change-view-label" class="slide-toggle-label"></label>
               </span>
               <div id="selected-nodes" class="montserrat-body">
                 <table id="selected-nodes-table" class="node_table montserrat-body">
@@ -107,7 +117,7 @@
               </div>
             </div>
             <div class="menu-item-container">
-              <span class="montserrat-title">state stack</span>
+              <span class="montserrat-title" style="margin: .1em; display: block;">state stack</span>
               <div id = "state_stack" class = "text-box montserrat-body">
               </div>
             </div>
@@ -117,12 +127,22 @@
           </div>
         </div>
       </div>
-      <div id="doc-display" class="montserrat-body" ondrop="drop_handler(event);" ondragover="drag_over_handler(event);">
+      <div class="collapsible text-box-background-color">
+        <input type="checkbox" class="hide-button" onchange='update_svg_size()'/>
+        <div id="doc-display" class="montserrat-body collapse-h" ondrop="drop_handler(event);" ondragover="drag_over_handler(event);">
+        </div>
       </div>
       <div id="graph">
       </div>
     </div>
     <script>
+    // colors
+    const ordrScale = d3.scaleOrdinal()
+    .domain(['1', '2', '3', '4', '5', '6', '7', '8'])
+    .range([
+      '#DE3A3AFF', '#2CA0C3FF', '#C5AD40FF', '#36BC5EFF', 
+      '#BC3F7AFF', '#4553B1FF', '#D68E4AFF', '#29CCA3FF', 
+    ])
 
     // constants
     const context = document.getElementById("graph");
