@@ -9,11 +9,13 @@
 
   --standard-radius: 5px;
 
-  --toggle-height: 1em;
-  --toggle-width: 2em;
+  --toggle-height: .7em;
+  --toggle-width: 1.4em;
   --toggle-border-width: .1em;
+  --toggle-bg-color: #232323;
+  --toggle-bg-color-checked: rgb(47, 114, 201);
 
-  --box-std-width: 90%;
+  --box-std-width: 95%;
 }
 
 
@@ -60,8 +62,8 @@ input{
 
 /* IDS */
 #graph{
-  width: 80vw;
-  height: 101vh;
+  width: 100%;
+  height: 100%;
   background-color: var(--graph-bg-color);
   background-image: linear-gradient(var(--grid-lines-color) 1%, transparent 1%, transparent 49.33%, 
                                     var(--grid-lines-color) 49.33%, 
@@ -70,12 +72,6 @@ input{
                                            var(--grid-lines-color) 49.33%,
                                            var(--grid-lines-color) 50.66%, transparent 50.66%);
   background-size: 5em 5em;
-}
-
-#graph-console{
-  width: 100%;
-  padding: 0em .5em;
-  position: absolute;
 }
 
 #node-selector{
@@ -89,29 +85,57 @@ input{
   height: 25%;
 }
 
+
 #out{
   visibility: hidden;
 }
 
-#change-view{
+#doc-display{
+  height: 100%;
+  width: 30em;
+  align-items: center;
+  overflow-y: scroll;
+  padding: .1em 1em;
+  background-color: var(--text-box-bg-color);
+}
+
+#drop-zone{
+  width: 100%;
+  height: 100%;
+  padding: 2em;
+  border: 2em solid var(--font-color-1);
+  border-radius: 4em;
+  background-color: var(--bg-color-1);
+}
+
+.slide-toggle-container{
+  display:flex; 
+  flex-direction: row; 
+  align-items: center;
+  margin-bottom: .25em;
+}
+
+.slide-toggle{
   display: none;
 }
 
-#change-view-label{
+.slide-toggle-label{
   display: inline-block;
   width: var(--toggle-width);
   height: var(--toggle-height);
   border-radius: var(--toggle-height);
-  background-color: var(--font-color-1);
-  border: var(--toggle-border-width) solid var(--font-color-1);
+  background-color: var(--toggle-bg-color);
+  border: var(--toggle-border-width) solid var(--toggle-bg-color);
+  box-shadow: none;
+  margin-left: 1em;
 }
 
-#change-view-label::after{
+.slide-toggle-label::after{
   content:"";
   display: inline-block;
   position: relative;
-  top: 0em;
-  left: 0em;
+  top: -.17em;
+  left: 0;
   width: var(--toggle-height);
   height: var(--toggle-height);
   border-radius: var(--toggle-height);
@@ -119,8 +143,16 @@ input{
   transition: left .03s ease-out;
 }
 
-#change-view:checked + 
-#change-view-label::after{
+.slide-toggle:checked +
+.slide-toggle-label{
+  background-color: rgb(77, 142, 226);
+  border-color: var(--toggle-bg-color-checked);
+  box-shadow: 0 0 2px 0 var(--toggle-bg-color-checked),
+              0 0 2px 0 rgb(25, 67, 122) inset;
+}
+
+.slide-toggle:checked + 
+.slide-toggle-label::after{
   left: var(--toggle-height);
 }
 
@@ -135,16 +167,22 @@ input{
   background-color: var(--text-box-bg-color);
 }
 
+.background-color-1{
+  background-color: var(--bg-color-1);
+}
+
+.text-box-background-color{
+  background-color: var(--text-box-bg-color);
+}
+
 /* CLASSES */
-.collapseable{
+.collapsible{
   display: flex;
   flex-direction: row-reverse;
   justify-content: center;
   align-items: center;
-  background-color: var(--bg-color-1);
   box-shadow: -5em 0 .25em 5em rgba(0,0,0,.2),
                0em 0 .5em 0em rgba(239,239,239,.5) inset;
-  z-index: 2;
 }
 
 .hide-button{
@@ -183,10 +221,13 @@ input{
 
 .collapse-h{
   display: block;
+  transition: width 5s;
 }
 
 .hide-button:checked ~ .collapse-h {
+  width: 0;
   display: none;
+  transition: all 5s;
 }
 
 .montserrat-title{
@@ -219,59 +260,8 @@ input{
 }
 
 .node-list-menu{
-  width: 20vw;
-  height: 101vh;
-  background-color: var(--bg-color-1);
-}
-
-#graph{
-  width: 80vw;
-  height: 101vh;
-  background-color: var(--graph-bg-color);
-  background-image: linear-gradient(var(--grid-lines-color) 1%, transparent 1%, transparent 49.33%, var(--grid-lines-color) 49.33%, var(--grid-lines-color) 50.66%, transparent 50.66%),
-                    linear-gradient(90deg, var(--grid-lines-color) 1%, transparent 1%, transparent 49.33%, var(--grid-lines-color) 49.33%, var(--grid-lines-color) 50.66%, transparent 50.66%);
-  background-position: 2.5em 2.5em; 
-  background-size: 5em 5em;
-}
-
-#graph-console{
-  width: 100%;
-  height: .5em;
-  padding: 0em .5em;
-  position: absolute;
-  bottom: 1em;
-}
-
-#node-selector{
-  width: 100%;
-  height: 50%;
-}
-
-#node-options{
-  padding: 2px;
-  width: 100%;
-  height: 25%;
-}
-
-#out{
-  visibility: hidden;
-}
-
-#doc-display{
-  flex-basis: 1;
-  width: 50%;
-  align-items: center;
-  overflow-y: scroll;
-  padding: .1em 1em;
-  background-color: var(--text-box-bg-color);
-}
-
-#drop-zone{
-  width: 75%;
-  height: 75%;
-  padding: 2em;
-  border: 2em solid var(--font-color-1);
-  border-radius: 4em;
+  width: 20em;
+  height: 100%;
   background-color: var(--bg-color-1);
 }
 
@@ -344,7 +334,6 @@ input{
 }
 
 .node_table{
-  width: 100%;
   border-collapse: collapse;
   border-radius: var(--standard-radius);
 }
@@ -363,8 +352,7 @@ input{
 
 .node_table_cell{
   max-width: 5em;
-  overflow-x: scroll;
-  overflow-y: hidden;
+  overflow: hidden;
   border-right: 1px solid var(--font-color-1);
   border-left: 1px solid var(--font-color-1);
   height: 2em;
