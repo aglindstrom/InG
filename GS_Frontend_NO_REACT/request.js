@@ -22,6 +22,7 @@ async function load_keys(){
 function request_graph_data(nodes, action_name){
     let requests = [];
     nodes.forEach((node) => {
+        if(node.name[0] !== 'DX')
         requests.push(load_data(get_url(node), node));
     });
 
