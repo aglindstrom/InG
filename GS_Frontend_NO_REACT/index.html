@@ -385,7 +385,7 @@
       // based on data source 
       edges.forEach((edge) => {
         if(edge['group']) return;
-        edge['group'] = source.group;
+        edge['group'] = source.group+1;
       });
 
       // prune unused nodes
@@ -471,8 +471,8 @@
 
     function update_svg_size(){
       width = context.scrollWidth;   // working width and height for the simulation
-      height = context.scrollHeight; //
-      svg.setAttribute('viewBox', [-width/2, -height/2, width, height]);
+      svg.attr('viewBox', [-width/2, -height/2, width, height]);
+      update_graph();
     }
 
     // updates the edge weight threshold
@@ -487,6 +487,13 @@
       scale = document.getElementById("scale").value;
 
       state_push(get_state(), "UPDATE SCALE");
+      update_graph();
+    }
+
+    function update_topk(){
+      topk = document.getElementById("topk").value;
+
+      state_push(get_state(), "UPDATE TOPK");
       update_graph();
     }
 
@@ -574,7 +581,7 @@
     }
 
     function get_label(node){
-      return labeling == 0? node['dx10'] : Number.parseFloat(node['equiv']).toFixed(4);
+      return document.querySelector('#label-view').checked? node.name?.join(':'): node.name?.at(-1); //labeling == 0? (document.getElementById('label-view').checked? name?.join(':'): name?.at(-1)) : Number.parseFloat(node['equiv']).toFixed(4);
     }
 
     // updates the string to compare with on each node
