@@ -393,8 +393,8 @@
       node_data.filter((node) => node == undefined);
 
       // keep a copy of the links and update the link data
-      link_data[`group_${source.group}`] = [...(link_data[`group_${source.group}`] ?? []), ...(edges ?? [])];
-      links[`group_${source.group}`] = JSON.parse(JSON.stringify([...(link_data[`group_${source.group}`] ?? []), ...(edges ?? [])]));
+      link_data[`group_${source.group+1}`] = [...(link_data[`group_${source.group+1}`] ?? []), ...(edges ?? [])];
+      links[`group_${source.group+1}`] = JSON.parse(JSON.stringify([...(link_data[`group_${source.group+1}`] ?? []), ...(edges ?? [])]));
       for(const group in links){
         links[group] = links[group].map((l) => {
           l.target = l.target[name] ?? l.target;
