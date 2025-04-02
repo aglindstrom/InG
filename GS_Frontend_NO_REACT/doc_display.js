@@ -29,13 +29,14 @@ function drop_handler(event){
 
         let doc_span = document.createElement('span');
         doc_span.className += 'montserrat-body';
+        doc_span.style.opacity = 0;
         doc_span.appendChild(document.createTextNode(doc));
 
         doc_display.appendChild(title_span);
         doc_display.appendChild(document.createElement('br'));
         doc_display.appendChild(doc_span);
 
-        return extract_entities(doc_split)
+        return extract_entities(doc)
             .then((entities) => {
                 let out = {};
                 let edges = [];
@@ -71,38 +72,73 @@ function drag_over_handler(event){
 
 function highlight(element, entities){
     let doc_text = element.textContent;
+    let parent = element.parentElement;
     const names = entities.map((entity) => entity.split(':').at(-1));
+    const delay = 75;
+    let last = 0;
+    parent.removeChild(element);
     element.textContent = "";
     names.forEach((name, idx) => {
-        let split = doc_text.split(name, 2);
-        doc_text = split.at(-1);
+        let expresion = new RegExp(`${name}(.*)`, 's');
+        let split = doc_text.split(expresion,2);
+        doc_text = split[1];
 
         let word_span = document.createElement('span');
-        word_span.classList.add(...['word', 'montserrat-body']);
+        word_span.classList.add(...['word', 'start', 'montserrat-body']);
         word_span.textContent = split[0];
-        element.appendChild(word_span);
+        word_span.style.animationDelay = `${(idx*2)*delay}ms`;
+        word_span.addEventListener("animationend", (e) => { e.target.classList.add('end'); e.target.classList.remove('start')});
+        parent.appendChild(word_span);
 
         let name_span = document.createElement('span');
-        name_span.classList.add(...['word', 'active', 'montserrat-body']);
+        name_span.classList.add(...['word', 'active', 'start', 'montserrat-body']);
         name_span.title = entities[idx];
         name_span.textContent = name;
-        element.appendChild(name_span);
+        name_span.style.animationDelay = `${(idx*2+1)*delay}ms`
+        name_span.addEventListener("animationend", (e) => { e.target.classList.add('end'); e.target.classList.remove('start')});
+        parent.appendChild(name_span);
     });
+
+    if(doc_text){
+        let word_span = document.createElement('span');
+        word_span.classList.add(...['word', 'start', 'montserrat-body']);
+        word_span.textContent = doc_text;
+        word_span.style.animationDelay = `${(names.length*2)*delay}ms`;
+        word_span.addEventListener("animationend", (e) => { e.target.classList.add('end'); e.target.classList.remove('start')});
+        parent.appendChild(word_span);
+    }
 }
 
 
 async function extract_entities(data){
-    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/VT-NE/VT:${data.join('%20')}`;
-    console.log(url);
+    const segmenter = new Intl.Segmenter("en-US", {granularity:"sentence"});
+    const sentences = segmenter.segment(data)[Symbol.iterator]();
 
-    let data_out = await fetch(url)
-        .then((resp) => resp.json())
-        .then((data) => data)
-        .catch((error) => console.error("Extract_Entities ", error));
+    const requests = sentences.map(async (sentence) => {
+        let url = new URL(`https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/VT-NE`);
 
+        let resp = await fetch(url, {
+                method: "POST",
+                headers: {
+                    'Content-Type':'application/json'
+                },
+                body: `{\"data\":\"VT:${sentence.segment}\"}`
+            }).catch((error) => {console.error("Extract_Entities ", error)})
+
+        const data = await resp.json();
+
+        if(!resp.ok){
+            console.log(data, `sentence: ${sentence.segment}`);
+        }
+        
+        return data;
+    });
+
+    let data_out = await Promise.allSettled(requests);
+    data_out = data_out.map((a) => (a.status === 'fulfilled'? (a.value.detail? [] : a.value) : undefined)).flat();
+    console.log(data_out);
     return data_out;
 }
-
 
 async function encode_entity(entity){
     const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/NE-DX/${entity.split(' ').join('%20')}?topk=${topk}`;

@@ -265,12 +265,46 @@ input{
   background-color: var(--bg-color-1);
 }
 
+.word.start{
+  opacity: 0;
+}
+
 .word{
+  animation: reveal-word 1ms linear;
+}
+
+.word.end{
   opacity: .5;
 }
 
+@keyframes reveal-word {
+  0%{
+    opacity: 0;
+  }
+  100%{
+    opacity: .5;
+  }
+}
+
+.word.active.start{
+  opacity: 0;
+}
+
 .word.active{
+  animation: reveal-entity 1ms linear;
+}
+
+.word.active.end{
   opacity: 1;
+}
+
+@keyframes reveal-entity {
+  0%{
+    opacity: 0;
+  }
+  100%{
+    opacity: 1;
+  }
 }
 
 .word.active:hover{
