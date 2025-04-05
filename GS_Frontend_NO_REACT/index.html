@@ -14,10 +14,12 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="./history.js"></script>
     <script src="./request.js"></script>
+    <script src="./user_menu.js"></script>
     <script src="./doc_display.js"></script>
 </head>
 <body>
-    <div id="drop-down" class="drop-down">
+    <!-- Anchor Dropdown-->
+    <div id="drop-down" class="drop-down" onmouseout="hide_menus()">
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_in_edges();"> edges-in </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_out_edges();"> edges-out </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_all_edges();"> edges-all </div>
@@ -26,80 +28,99 @@
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); request_node_description(clicked_node[name]);"> description </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
     </div>
-    <div id="node-drop-down" class="drop-down">
+
+    <!-- Node Dropdown-->
+    <div id="node-drop-down" class="drop-down" onmouseout="hide_menus()">
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div>
+    </div>
+
+    <!-- Application drop down-->
+    <div id="application-drop-down" class="drop-down" onmouseout="hide_menus()">
+      <div class="drop-down-option montserrat-body" onclick="hide_menus(); show_modal(settings_modal);"> settings </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+      <div>
+        <div onclick="hide_modal(settings_modal)"> x </div>
+        <hr>
+        <div class="menu-item-container">
+          <div>
+            <label class="montserrat-title" for="anchor_color">anchor color</label>
+            <input id="anchor_color" type="color" value="#000000" onchange=""/>
+          </div>
+          <div>
+            <label class="montserrat-title" for="node_color">node color</label>
+            <input id="node_color" type="color" value="#5a5a5a" onchange="update_node_color()"/>
+          </div>
+        </div>
+        <div class="menu-item-container">
+          <div style="display:flex; justify-content: space-between;">
+            <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
+            <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
+          </div>
+          <div style="display:flex; justify-content: space-between;">
+            <label style="flex-basis:1;" class="montserrat-title" for="threshold">threshold</label>
+            <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
+          </div>
+          <div style="display:flex; justify-content: space-between;">
+            <label style="flex-basis:1;" class="montserrat-title" for="scale">scale</label>
+            <input id="scale" class="number" type="number" min="0" value=".01" step=".01" onchange="update_scale()"/>
+          </div>
+          <div style="display:flex; justify-content: space-between;">
+            <label style="flex-basis:1;" class="montserrat-title" for="scale">topk</label>
+            <input id="topk" class="number" type="number" min="0" value="20" step="1" onchange="update_topk()"/>
+          </div>
+        </div>
+
+        <hr/>
+
+        <fieldset class="menu-item-container">
+          <legend class="montserrat-title">Coloring</legend>
+          <div>
+            <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
+            <label for="ratio" class="montserrat-body">ratio</label>
+          </div>
+          <div>
+            <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
+            <label for="cossim" class="montserrat-body">cossim</label>
+          </div>
+        </fieldset>
+
+      </div>
     </div>
     <div class="app-container">
       <div class="collapsible background-color-1" style="z-index: 2;">
         <input type="checkbox" class="hide-button" onchange='update_svg_size()'/>
         <div class="node-list-menu collapse-h">
           <div id="node-options">
-            <div class="menu-item-container">
-              <div>
-                <label class="montserrat-title" for="anchor_color">anchor color</label>
-                <input id="anchor_color" type="color" value="#000000" onchange=""/>
+            <div id="other-menus">
+              <div id="user" onclick="open_user_menu(event)">
               </div>
-              <div>
-                <label class="montserrat-title" for="node_color">node color</label>
-                <input id="node_color" type="color" value="#5a5a5a" onchange="update_node_color()"/>
+              <div id="title">
               </div>
             </div>
 
             <hr/>
-
-            <div class="menu-item-container">
-              <div style="display:flex; justify-content: space-between;">
-                <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
-                <input id="depth" class="number" type="number" min="0" value="1" onchange="update_depth(get_url(8000));"/>
-              </div>
-              <div style="display:flex; justify-content: space-between;">
-                <label style="flex-basis:1;" class="montserrat-title" for="threshold">threshold</label>
-                <input id="threshold" class="number" type="number" min="0" max="1" value=".5" step=".01" onchange="update_threshold()"/>
-              </div>
-              <div style="display:flex; justify-content: space-between;">
-                <label style="flex-basis:1;" class="montserrat-title" for="scale">scale</label>
-                <input id="scale" class="number" type="number" min="0" value=".01" step=".01" onchange="update_scale()"/>
-              </div>
-              <div style="display:flex; justify-content: space-between;">
-                <label style="flex-basis:1;" class="montserrat-title" for="scale">topk</label>
-                <input id="topk" class="number" type="number" min="0" value="20" step="1" onchange="update_topk()"/>
-              </div>
-            </div>
-
-            <hr/>
-
-            <fieldset class="menu-item-container">
-              <legend class="montserrat-title">Coloring</legend>
-              <div>
-                <input name="coloring" id="ratio" value="ratio" type="radio" onchange="update_coloring(0)" checked/>
-                <label for="ratio" class="montserrat-body">ratio</label>
-              </div>
-              <div>
-                <input name="coloring" id="cossim" value="cosine similarity" type="radio" onchange="update_coloring(1)"/>
-                <label for="cossim" class="montserrat-body">cossim</label>
-              </div>
-            </fieldset>
             <fieldset class="menu-item-container">
               <legend class="montserrat-title">Labeling</legend>
               <span class="montserrat-body slide-toggle-container"> show node labels 
                 <input id="label-view" class="slide-toggle" type="checkbox" checked="true" onchange="update_graph()"/>
                 <label for="label-view" class="slide-toggle-label"></label>
               </span>
-              <!--
-              <div>
+              <!--<div>
                 <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
                 <label for="text" class="montserrat-body">DX10</label>
               </div>
               <div>
                 <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
                 <label for="similarity" class="montserrat-body">similarity</label>
-              </div>
-              -->
+              </div> -->
             </fieldset>
-
             <hr/>
             <div class="menu-item-container">
+              
               <span class="montserrat-title slide-toggle-container"> selection
                 <input id="change-view" class="slide-toggle" type="checkbox" onclick="switch_selected_nodes_view()"/>
                 <label for="change-view" id="change-view-label" class="slide-toggle-label"></label>
@@ -144,16 +165,21 @@
       '#BC3F7AFF', '#4553B1FF', '#D68E4AFF', '#29CCA3FF', 
     ])
 
+   
+
     // constants
     const context = document.getElementById("graph");
     let width = context.scrollWidth;   // working width and height for the simulation
     let height = context.scrollHeight; //
     const padding = 20;
-    const drop_down = document.getElementById("drop-down");           // the dropdown menu for right click
-    const node_drop_down = document.getElementById("node-drop-down"); // the dropdown menu for node clicks
-    const menus = [drop_down, node_drop_down];
+    const drop_down = document.getElementById("drop-down");                         // the dropdown menu for right click
+    const node_drop_down = document.getElementById("node-drop-down");               // the dropdown menu for node clicks
+    const application_drop_down = document.getElementById("application-drop-down"); // the dropdown menu for application options clicks
+    const settings_modal = document.getElementById("settings-modal");
+    const menus = [drop_down, node_drop_down, application_drop_down];
+    const modals = [settings_modal]
     const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
-    const link_color = ordrScale;         // node colors for comparison string
+    const link_color = ordrScale;                                 // node colors for comparison string
     const invokeURL = "http://127.0.0.1";                         // the address of the API
     const graph_sources = [{port:8000, id:0},                     // list of valid source ports 
                            {port:8001, id:1}];                    //
@@ -173,9 +199,8 @@
     let topk = 20;
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
-    let links = {};
-
     // graph data
+    let links = {};
     let loaded = [];          // list of node names that are currently loaded 
     let node_data = [];       // all the nodes
     let link_data = {};       // all the links
@@ -224,6 +249,10 @@
     let grouping = svg.append("g").selectAll(".grouping");
     let node = svg.append("g").selectAll(".node");
     let text = svg.append("g").selectAll(".label");
+
+
+    //window events
+    addEventListener("resize", update_svg_size());
 
     function zoomed({transform}) {
       node.attr("transform", d => `translate(${transform.apply(d)})`);
@@ -764,6 +793,13 @@
       return selected_nodes.filter((node) => node.name == name).length != 0;
     }
 
+    function show_modal(modal){
+      modal.style.display = 'block';
+    }
+
+    function hide_modal(modal){
+      modal.style.display = 'none';
+    }
 ///////////////// STATE FUNCS //////////////////
 
     function get_state(){

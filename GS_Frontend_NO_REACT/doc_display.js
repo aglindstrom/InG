@@ -46,7 +46,7 @@ function drop_handler(event){
                 Promise.allSettled(code_requests)
                     .then((code_list) => {
                         let codes = [...code_list.map((code) => code.status === 'fulfilled'? code.value: []).flat(Infinity)];
-                        state_push(get_state(), 'GET ENTITIES');
+                        //state_push(get_state(), 'GET ENTITIES');
                         codes = codes.map((code) => ({entity: {name: code.entity.split(':'), dx10: code.entity.split(':').at(-1)}, 
                                                       data: code.data.map((node) => ({name: node.split(':'), dx10: node.split(':').at(-1)})) }) );
                         edges = create_entity_edges(codes);
