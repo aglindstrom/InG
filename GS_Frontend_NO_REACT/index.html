@@ -70,7 +70,7 @@
           </div>
           <div style="display:flex; justify-content: space-between;">
             <label style="flex-basis:1;" class="montserrat-title" for="scale">topk</label>
-            <input id="topk" class="number" type="number" min="0" value="20" step="1" onchange="update_topk()"/>
+            <input id="topk" class="number" type="number" min="0" value="10" step="1" onchange="update_topk()"/>
           </div>
         </div>
 
@@ -196,7 +196,7 @@
     let scale = document.getElementById("scale").value;
     let coloring = 0;
     let labeling = 0;
-    let topk = 20;
+    let topk = localStorage.getItem('potter-topk'); document.querySelector('#topk').value = topk ?? 10;
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
     // graph data
@@ -355,6 +355,8 @@
     function drag(simulation) {
         function dragstarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.tx = d.fx;
+            d.ty = d.fy;
             d.fx = clamp(event.x, width/2, padding);
             d.fy = clamp(event.y, height/2, padding);
         }
@@ -369,8 +371,10 @@
             if(is_anchor(d[name])){
               pin(d);
             }else{
-              d.fx = null;
-              d.fy = null;
+              d.fx = d.tx;
+              d.fy = d.ty;
+              d.tx = undefined;
+              d.ty = undefined;
             }
         }
 
@@ -521,7 +525,7 @@
 
     function update_topk(){
       topk = document.getElementById("topk").value;
-
+      localStorage.setItem('potter-topk', topk);
       state_push(get_state(), "UPDATE TOPK");
       update_graph();
     }
@@ -637,9 +641,6 @@
 
       const post = fetch(request).then((resp) => resp.json() ).then((json) => console.error(json.detail));
     }
-
-   
-
 
     // ratio of the number of characters in the string that match in order
     function similarity(node){

@@ -2,13 +2,10 @@ function drop_handler(event){
     const doc_display = document.getElementById('doc-display');
     const reader = new FileReader();
     const files = [];
-
-    console.log("Drop Event: ", event);
     event.preventDefault();
 
     if(event.dataTransfer.items){
         [...event.dataTransfer.items].forEach((item) =>{
-            console.log('Type: ', item.getAsFile().type);
             if(item.kind === 'file' && item.getAsFile().type === 'text/plain'){
                 files.push(item.getAsFile());
             }
@@ -38,32 +35,51 @@ function drop_handler(event){
 
         return extract_entities(doc)
             .then((entities) => {
-                let out = {};
-                let edges = [];
-                const req_ent = entities.filter((entity) => entity.split(':')[1] !== 'Clinical_event');
-                const code_requests = req_ent.map((entity) => encode_entity(entity));
+                const req_ent = [...new Set(entities.filter((entity) => entity.split(':')[1] !== 'Clinical_event'))];
+                console.log(req_ent);
+                const code_requests = req_ent.map((entity, idx) => encode_entity(entity, idx));
                 highlight(doc_span, entities);
-                Promise.allSettled(code_requests)
-                    .then((code_list) => {
-                        let codes = [...code_list.map((code) => code.status === 'fulfilled'? code.value: []).flat(Infinity)];
-                        //state_push(get_state(), 'GET ENTITIES');
-                        codes = codes.map((code) => ({entity: {name: code.entity.split(':'), dx10: code.entity.split(':').at(-1)}, 
-                                                      data: code.data.map((node) => ({name: node.split(':'), dx10: node.split(':').at(-1)})) }) );
-                        edges = create_entity_edges(codes);
-                        out = {nodes: [... new Set(codes.map((code) => [code.entity, ...code?.data]).flat(Infinity))],
-                               edges: [... new Set(edges.flat(Infinity))]};
-                        if(!link_data['group_0']){ link_data['group_0'] = [];}
-                        link_data['group_0'].push(...out.edges);
-                        node_data.push(...out.nodes);
-                        loaded.push(...out.nodes.map((node) => node['dx10']));
-                        update_graph();
-                    });
+                handle_code_requests(code_requests);
             });
     }
 
     reader.readAsText(files[0]);
 }
 
+async function handle_code_requests(code_requests){
+    let out = {};
+    let edges = [];
+    while(code_requests.length){
+        const code = await Promise.race(code_requests);
+        for(const req of code_requests){
+            req.then((res) => {if(res === code){code_requests.splice(code_requests.indexOf(req), 1); console.log(code);}})
+               .catch((error) => {console.error("Code_Request: ", error); code_requests.splice(code_requests.indexOf(req), 1); console.log(code_requests.length); });
+        }
+        
+        if(code === undefined || code?.error){
+            continue;
+        }else{
+            const node = ({entity: {name: code.entity?.split(':'),
+                              dx10: code.entity?.split(':').at(-1)},
+                        data: code.data?.map((c) => ({
+                                name: c.split(':'),
+                                dx10: c.split(':').at(-1)
+                            })
+                        )
+                    });
+            edges = create_entity_edges(node);
+            node.entity.fx = 0;
+            out = {nodes: [... new Set([node.entity, ...node?.data]?.flat(Infinity))],
+                   edges: [... new Set(edges?.flat(Infinity))]};
+            if(!link_data['group_0']){ link_data['group_0'] = [];}
+            link_data['group_0'].push(...out.edges);
+            out.nodes = out.nodes.filter((node) => !loaded?.includes(node.dx10))
+            loaded.push(...out.nodes.map((node) => node['dx10']));
+            node_data.push(...out.nodes);
+            update_graph();
+        }
+    }
+}
 
 function drag_over_handler(event){
     event.preventDefault();
@@ -115,20 +131,20 @@ async function extract_entities(data){
     const sentences = segmenter.segment(data)[Symbol.iterator]();
 
     const requests = sentences.map(async (sentence) => {
-        let url = new URL(`https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/VT-NE`);
+        let url = new URL(`https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/VT-NE/`);
 
         let resp = await fetch(url, {
                 method: "POST",
                 headers: {
                     'Content-Type':'application/json'
                 },
-                body: `{\"data\":\"VT:${sentence.segment}\"}`
+                body: `{\"data\":\"VT:${sentence.segment.split(/\s+/).join(' ')}\"}`
             }).catch((error) => {console.error("Extract_Entities ", error)})
 
         const data = await resp.json();
 
         if(!resp.ok){
-            console.log(data, `sentence: ${sentence.segment}`);
+            console.error(data, `sentence: ${sentence.segment}`);
         }
         
         return data;
@@ -136,24 +152,21 @@ async function extract_entities(data){
 
     let data_out = await Promise.allSettled(requests);
     data_out = data_out.map((a) => (a.status === 'fulfilled'? (a.value.detail? [] : a.value) : undefined)).flat();
-    console.log(data_out);
     return data_out;
 }
 
-async function encode_entity(entity){
-    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/NE-DX/${entity.split(' ').join('%20')}?topk=${topk}`;
-    console.log(url);
-
+async function encode_entity(entity, idx){
+    const url = `https://olive.is.mediocreatbest.xyz/4YCABK9FR0/api/v1/NE-DX/${entity.split(/\s+/).join('%20')}?topk=${topk}`;
     let data_out = await fetch(url)
         .then((resp) => resp.json())
-        .then((data) => ({entity: entity, data: data.map((node) => node.padEnd(7, '-'))}))
+        .then((data) => ({entity: entity, data: data.map((node) => node.padEnd(7, '-')), loc:idx}))
         .catch((error) => console.error("Encode_Entity ", error));
 
     return data_out;
 }
 
-function create_entity_edges(entities){
-    return entities.map((entity) => entity.data?.map((code) => ({source: entity.entity.dx10, target: code.dx10, perplexity: '0', group: 0})));
+function create_entity_edges(entity){
+    return entity.data?.map((code) => ({source: entity.entity.dx10, target: code.dx10, perplexity: '0', group: 0}));
 }
 
 function select_entity_nodes(entities){
