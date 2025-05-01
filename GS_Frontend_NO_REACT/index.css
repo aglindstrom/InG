@@ -1,5 +1,6 @@
 :root{
   --bg-color-1: #dedede;
+  --bg-color-2: #ababab;
   --text-box-bg-color: #efefef;
   --graph-bg-color: #efefef;
   --grid-lines-color: #dedede;
@@ -135,6 +136,13 @@ input{
   justify-content: end;
 }
 
+.two-stack{
+  height: 5em;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+}
+
 .slide-toggle-container{
   display:flex; 
   flex-direction: row; 
@@ -215,6 +223,7 @@ input{
   border-left: .125em solid var(--font-color-1);
   border-bottom: .125em solid var(--font-color-1);
   left: .15em;
+  cursor:pointer;
 }
 
 .hide-button:active{
@@ -332,7 +341,7 @@ input{
   min-width: 10em;
   position: absolute;
   display: none;
-  background-color: var(--bg-color-1);
+  background-color: var(--bg-color-2);
   border-radius: var(--standard-radius);
 }
 
@@ -343,6 +352,11 @@ input{
 .drop-down-option:first-child{
   border-top-left-radius: var(--standard-radius);
   border-top-right-radius: var(--standard-radius);
+}
+
+.drop-down-option:last-child{
+  border-bottom-left-radius: var(--standard-radius);
+  border-bottom-right-radius: var(--standard-radius);
 }
 
 .drop-down-submenu{
@@ -430,12 +444,47 @@ input{
 }
 
 .modal>div{
-  background-color: var(--bg-color-1);
+  background-color: var(--graph-bg-color);
   border-radius: var(--standard-radius);
   padding: 2em;
   margin: 12.5dvh 12.5dvw;
   width: 75dvw;
   height: 75dvh;
+}
+
+.modal .exit{
+  width: .5em;
+  height: .5em;
+  margin: .5em;
+  padding: .5em;
+  text-align: center;
+  vertical-align: middle;
+  border-radius: 3px;
+  color: var(--bg-color-1);
+  cursor: pointer;
+  transition: background-color .1s ease;
+}
+
+.modal .exit:hover{
+  background-color: rgb(255, 134, 134);
+  transition: background-color .1s ease;
+}
+
+.modal .exit div{
+  position: relative;
+  top: -.25em;
+  left: -.25em;
+}
+
+.modal .exit .x{
+  opacity: 1;
+  fill: var(--font-color-1);
+  transition: fill .1s ease;
+}
+
+.modal .exit:hover .x{
+  fill: var(--graph-bg-color);
+  transition: fill .1s ease;
 }
 
 /* SVG STYLES */
