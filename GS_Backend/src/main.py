@@ -24,6 +24,8 @@ app.embed_string = ""
 app.node_file = os.environ['ING_NODES']
 app.edge_file = os.environ['ING_EDGES']
 app.name = os.environ['ING_NAMES']
+app.nodes = None;
+app.edges = None;
 
 origins = [
     "http://localhost:3000",
@@ -40,19 +42,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@functools.cache
 def load_nodes():
     logger.info(app.node_file)
-    nodes = pd.read_csv(app.node_file, compression='gzip')
-    return nodes
+    if type(app.nodes) == type(None):
+        app.nodes = pd.read_csv(app.node_file, compression='gzip')
 
-@functools.cache
+    return app.nodes
+
+def add_node(code):
+    logger.info('adding node')
+    app.nodes = pd.concat([app.nodes, pd.DataFrame([code], columns=['dx10'])])
+    node = app.nodes.iloc[[-1]]
+    return node
+
 def load_edges():
     logger.info(app.edge_file)
-    edges = pd.read_csv(app.edge_file, compression='gzip')
-    edges = edges.rename(columns={"DX1":"source", "DX2":"target"})
-    logger.info(edges)
-    return edges
+    
+    if type(app.edges) == type(None):
+        app.edges = pd.read_csv(app.edge_file, compression='gzip')
+        app.edges = app.edges.rename(columns={"DX1":"source", "DX2":"target"})
+    
+    return app.edges
 
 @functools.cache
 def load_keys():
@@ -93,6 +103,33 @@ async def post_embed(request:Message):
 async def get_graph_keys():
     return load_keys()
 
+@app.get("/api/graph/add_edge")
+async def add_edge(source:str="A",target:str="B"):
+    if source == "A" or target == "B":
+        return
+    
+    if type(app.edges) == type(None):
+        load_edges()
+    
+    if type(app.nodes) == type(None):
+        load_nodes()
+
+    nodes = None
+
+    if len(app.nodes.loc[app.nodes[app.name] == source]) == 0:
+        nodes = add_node(source)
+    else:
+        nodes = app.nodes.loc[app.nodes[app.name] == source]
+    
+    if len(app.nodes.loc[app.nodes[app.name] == target]) == 0:
+        nodes = pd.concat([nodes, add_node(target)])
+    else:
+        nodes = pd.concat([nodes, app.nodes.loc[app.nodes[app.name] == target]])
+
+    edges = pd.DataFrame([[source, target, '0.00']], columns=['source', 'target', 'perplexity'])
+    app.edges = pd.concat([app.edges, edges])
+    return {"nodes": nodes.to_json(orient='records'), "edges": edges.to_json(orient='records')}
+
 @app.get("/api/graph")
 async def get_graph_by_nodes(codes:str="A", depth:int = 0, directions:str = "0"):
     code_list = codes.split(",")
@@ -108,8 +145,9 @@ async def get_graph_by_nodes(codes:str="A", depth:int = 0, directions:str = "0")
         node = graph_nodes.loc[graph_nodes[app.name] == code]
         anchors = pd.concat([anchors, node])
 
-    if type(anchors) == type(None):
-        return {"nodes": [], "edges": []}
+    if anchors.empty:
+        anchors = pd.DataFrame(add_node(code_list))
+        return {"nodes": anchors.to_json(orient='records'), "edges": "[]"}
 
     if depth == 0:
         return {"nodes": anchors.to_json(orient='records'), "edges": "[]"}
@@ -123,18 +161,25 @@ async def get_graph_by_nodes(codes:str="A", depth:int = 0, directions:str = "0")
             edges = pd.concat([edges, get_edges(anchor[1][app.name], 'target', 'source', depth-1)])
         idx += 1
 
-    if type(edges) == type(None):
+    if edges.empty:
         return {"nodes":anchors.to_json(orient='records'), "edges": "[]"}
 
     for edge in edges.iterrows():
         nodes = pd.concat([nodes, graph_nodes.loc[graph_nodes[app.name] == edge[1]['source']]])
         nodes = pd.concat([nodes, graph_nodes.loc[graph_nodes[app.name] == edge[1]['target']]])
 
-    edges = edges.drop_duplicates()            
-    edges = edges.sort_values('source')
+    try:
+        edges = edges.drop_duplicates()            
+        edges = edges.sort_values('source')
+    except:
+        logger.error("Failed to drop edges")
 
-    nodes = nodes.drop_duplicates()
-    nodes = nodes.sort_values(app.name)
+    try:
+        nodes = nodes.drop_duplicates()
+        nodes = nodes.sort_values(app.name)
+    except:
+        logger.error("Failed to drop nodes")
+
 
     try:
         # generate cosine similarities
@@ -153,8 +198,10 @@ async def get_graph_by_nodes(codes:str="A", depth:int = 0, directions:str = "0")
     except:
         logger.error("App.embed_vector was not initialized")
 
+    logger.info(type(nodes))
     return {"nodes": nodes.to_json(orient='records'), "edges": edges.to_json(orient='records')}
 
+@functools.cache
 def get_edges(node, source, target, depth):
     
     graph_edges = load_edges()
@@ -196,8 +243,6 @@ def embd_loads(s: str) -> auto.np.ndarray:
     v = auto.np.frombuffer(b, dtype='f2')
     v = v.astype('f4')
     return v
-
-
 
 ############ LLM API #############
 
