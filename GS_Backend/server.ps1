@@ -1,6 +1,6 @@
 param(
-  [string]$nodes = './GS_Backend/data/ICD10CM,length=4.csv.gz',
-  [string]$edges = './GS_Backend/data/DgPg-GenIndFwd,top_p=0.1.csv.gz',
+  [string]$nodes = './data/ICD10CM,length=4.csv.gz',
+  [string]$edges = './data/DgPg-GenDirFwd,top_p=0.1.csv.gz',
   [string]$names = 'dx10',
   [string]$port = '8000'
 )
@@ -14,4 +14,4 @@ Write-Output "EDGE FILE: " $ENV:ING_EDGES
 Write-Output "COLU NAME: " $ENV:ING_NAMES
 Write-Output "SERV PORT: " $port
 
-fastapi dev --port $port ./GS_Backend/src/main.py
+fastapi dev --port $port ./src/main.py
