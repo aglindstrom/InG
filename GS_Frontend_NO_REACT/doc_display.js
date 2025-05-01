@@ -63,7 +63,8 @@ async function handle_code_requests(code_requests){
                               dx10: code.entity?.split(':').at(-1)},
                         data: code.data?.map((c) => ({
                                 name: c.split(':'),
-                                dx10: c.split(':').at(-1)
+                                dx10: c.split(':').at(-1),
+                                type: 'DX'
                             })
                         )
                     });
@@ -170,5 +171,5 @@ function create_entity_edges(entity){
 }
 
 function select_entity_nodes(entities){
-    entities.forEach((e) => select_node({name: e.node.name, direction: e.node.direction, group: e.node.group}));
+    entities.forEach((e) => select_node({name: e.node.name, direction: e.node.direction, group: e.node.group, type: 'NE'}));
 }
