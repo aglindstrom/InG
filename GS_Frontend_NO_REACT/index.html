@@ -19,7 +19,7 @@
 </head>
 <body>
     <!-- Anchor Dropdown-->
-    <div id="drop-down" class="drop-down" onmouseout="hide_menus()">
+    <div id="drop-down" class="drop-down" onmouseleave="hide_menus()">
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_in_edges();"> edges-in </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_out_edges();"> edges-out </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); set_all_edges();"> edges-all </div>
@@ -27,34 +27,63 @@
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); pin(clicked_node);"> pin </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); request_node_description(clicked_node[name]);"> description </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); group_children(clicked_node[name]);"> group </div>
+      <div class="drop-down-option montserrat-body" onmouseenter="show_menu(add_edge_drop_down)"> add edge </div>
+      <div id="add-edge-drop-down" class="drop-down" onmouseleave="hide_menu(add_edge_drop_down)">
+        <input class="drop-down-option montserrat-body" type="text" onchange="add_edge(clicked_node, event)"/>
+      </div>
     </div>
+    <!-- Add Edge Menu -->
 
     <!-- Node Dropdown-->
-    <div id="node-drop-down" class="drop-down" onmouseout="hide_menus()">
+    <div id="node-drop-down" class="drop-down" onmouseleave="hide_menus()">
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(0);"> server 0 </div>
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); add_anchor(1);"> server 1 </div>
     </div>
 
     <!-- Application drop down-->
-    <div id="application-drop-down" class="drop-down" onmouseout="hide_menus()">
+    <div id="application-drop-down" class="drop-down" onmouseleave="hide_menus()">
       <div class="drop-down-option montserrat-body" onclick="hide_menus(); show_modal(settings_modal);"> settings </div>
     </div>
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
       <div>
-        <div onclick="hide_modal(settings_modal)"> x </div>
+        <!-- start exit -->
+        <div class="exit" onclick="hide_modal(settings_modal)">
+          <div>
+            <svg
+              width="1em"
+              height="1em"
+              viewBox="0 0 11.25138 11.250646"
+              version="1.1">
+              <g
+                transform="translate(-170.07726,-70.886282)">
+                <path
+                  class="x"
+                  d="m 170.07726,72.96388 c 1.18184,1.18256 2.36357,2.36524 3.54549,3.54773 -1.18192,1.18248 -2.36365,2.36516 -3.54549,3.54772 0.69253,0.69254 1.38506,1.38507 2.07759,2.0776 1.18281,-1.1821 2.36574,-2.36406 3.54848,-3.54624 1.18347,1.18118 2.36554,2.36377 3.54847,3.54549 0.69229,-0.69228 1.38457,-1.38456 2.07685,-2.07685 -1.18184,-1.18256 -2.36357,-2.36524 -3.54549,-3.54772 1.18193,-1.18249 2.36365,-2.36517 3.54549,-3.54773 -0.69228,-0.69229 -1.38456,-1.38457 -2.07685,-2.07685 -1.18292,1.18172 -2.365,2.3643 -3.54847,3.54549 -1.18274,-1.18217 -2.36567,-2.36414 -3.54848,-3.54624 -0.69253,0.69253 -1.38506,1.38506 -2.07759,2.0776 z" />
+              </g>
+            </svg>
+          </div>
+        </div>
+        <!-- end exit -->
         <hr>
-        <div class="menu-item-container">
+        <!-- start colors -->
+        <div class="menu-item-container two-stack">
           <div>
             <label class="montserrat-title" for="anchor_color">anchor color</label>
-            <input id="anchor_color" type="color" value="#000000" onchange=""/>
+            <input id="anchor_color" type="color" value="#000000" onchange="update_anchor_color()"/>
           </div>
           <div>
             <label class="montserrat-title" for="node_color">node color</label>
             <input id="node_color" type="color" value="#5a5a5a" onchange="update_node_color()"/>
           </div>
+          <div>
+            <label class="montserrat-title" for="named_entity_color">named entity color</label>
+            <input id="named_entity_color" type="color" value="#5a5a5a" onchange="update_named_entity_color()"/>
+          </div>
         </div>
+        <!-- end colors -->
+        <hr/>
         <div class="menu-item-container">
           <div style="display:flex; justify-content: space-between;">
             <label style="flex-basis:1;" class="montserrat-title" for="depth">depth</label>
@@ -73,9 +102,7 @@
             <input id="topk" class="number" type="number" min="0" value="10" step="1" onchange="update_topk()"/>
           </div>
         </div>
-
         <hr/>
-
         <fieldset class="menu-item-container">
           <legend class="montserrat-title">Coloring</legend>
           <div>
@@ -90,6 +117,8 @@
 
       </div>
     </div>
+    <!-- end Settings Modal -->
+
     <div class="app-container">
       <div class="collapsible background-color-1" style="z-index: 2;">
         <input type="checkbox" class="hide-button" onchange='update_svg_size()'/>
@@ -109,14 +138,6 @@
                 <input id="label-view" class="slide-toggle" type="checkbox" checked="true" onchange="update_graph()"/>
                 <label for="label-view" class="slide-toggle-label"></label>
               </span>
-              <!--<div>
-                <input name="labeling" id="ratio" value="dx10" type="radio" onchange="update_labeling(0)" checked/>
-                <label for="text" class="montserrat-body">DX10</label>
-              </div>
-              <div>
-                <input name="labeling" id="similarity" value="similarity" type="radio" onchange="update_labeling(1)"/>
-                <label for="similarity" class="montserrat-body">similarity</label>
-              </div> -->
             </fieldset>
             <hr/>
             <div class="menu-item-container">
@@ -168,15 +189,16 @@
    
 
     // constants
-    const context = document.getElementById("graph");
+    const context = document.querySelector("#graph");
     let width = context.scrollWidth;   // working width and height for the simulation
     let height = context.scrollHeight; //
     const padding = 20;
-    const drop_down = document.getElementById("drop-down");                         // the dropdown menu for right click
-    const node_drop_down = document.getElementById("node-drop-down");               // the dropdown menu for node clicks
-    const application_drop_down = document.getElementById("application-drop-down"); // the dropdown menu for application options clicks
-    const settings_modal = document.getElementById("settings-modal");
-    const menus = [drop_down, node_drop_down, application_drop_down];
+    const drop_down = document.querySelector("#drop-down");                         // the dropdown menu for right click
+    const node_drop_down = document.querySelector("#node-drop-down");               // the dropdown menu for node clicks
+    const application_drop_down = document.querySelector("#application-drop-down"); // the dropdown menu for application options clicks
+    const settings_modal = document.querySelector("#settings-modal");
+    const add_edge_drop_down = document.querySelector("#add-edge-drop-down");
+    const menus = [drop_down, node_drop_down, application_drop_down, add_edge_drop_down];
     const modals = [settings_modal]
     const color = d3.scaleSequential(d3.interpolateTurbo);        // node colors for comparison string
     const link_color = ordrScale;                                 // node colors for comparison string
@@ -187,16 +209,17 @@
 
     
     // initial values
-    let depth = document.getElementById("depth").value;                   // initial depth = 1
-    let comparison = document.getElementById("comparison").value;         // initial comparison string = ''
+    let depth = window.localStorage.getItem('potter-depth') ?? 1; document.querySelector('#depth').value = depth;                   // initial depth = 1
+    let comparison = document.querySelector("#comparison").value;         // initial comparison string = ''
     let name = 'dx10';                                                    // node name column. In the future a menu using the keys should be used to determin this
-    let distance_threshold = document.getElementById("threshold").value;  // initial distance threshold
-    let anchor_color = 'linear-gradient(90deg, rgb(255,133,0) 0%, rgba(75,75,75) 100%)';     // initial anchor color
-    let node_color = document.getElementById("node_color").value;
-    let scale = document.getElementById("scale").value;
+    let distance_threshold = window.localStorage.getItem('potter-threshold') ?? .5; document.querySelector('#threshold').value = distance_threshold;  // initial distance threshold
+    let anchor_color = window.localStorage.getItem('potter-anchor-color') ?? "#000000"; document.querySelector("#anchor_color").value = anchor_color;     // initial anchor color
+    let node_color = window.localStorage.getItem('potter-node-color') ?? "#5a5a5a"; document.querySelector("#node_color").value = node_color;
+    let named_entity_color = window.localStorage.getItem('potter-named-entity-color') ?? "#5a5a5a"; document.querySelector("#named_entity_color").value = named_entity_color;
+    let scale = window.localStorage.getItem('potter-scale') ?? .01; document.querySelector('#scale').value = scale;
     let coloring = 0;
     let labeling = 0;
-    let topk = localStorage.getItem('potter-topk'); document.querySelector('#topk').value = topk ?? 10;
+    let topk = window.localStorage.getItem('potter-topk') ?? 10; document.querySelector('#topk').value = topk;
     let clicked_node;                                                     // used for right click handling. Needed by more than one function so its a global
 
     // graph data
@@ -215,8 +238,6 @@
 
     // Create SVG
     const svg = d3.select("#graph").append("svg")
-        // .attr("width", width)
-        // .attr("height", height)
         .attr("preserveAspectRatio", "xMaxYMax slice")
         .attr("viewBox", [-width/2, -height/2, width, height]);
 
@@ -224,7 +245,7 @@
     const simulation = d3.forceSimulation()
         .force("link", d3.forceLink().id(d => d[name]))
         .force("grouping", d3.forceLink().id(d => d[name]))
-        .force("charge", d3.forceManyBody().strength(-150))
+        .force("charge", d3.forceManyBody().strength(-200))
         .force("y_sort-", d3.forceY(-height/2).strength(d => .05*d.equiv))
         .force("y_sort+", d3.forceY(height/2).strength(d => .05*(1-d.equiv)))
 
@@ -250,7 +271,6 @@
     let node = svg.append("g").selectAll(".node");
     let text = svg.append("g").selectAll(".label");
 
-
     //window events
     addEventListener("resize", update_svg_size());
 
@@ -270,7 +290,7 @@
         filtered_links.push(link_data[group]);
       }
       filtered_links = filtered_links.flat();
-      filtered_links = filtered_links.filter(d => (d.perplexity) > distance_threshold);
+      //filtered_links = filtered_links.filter(d => (d.perplexity) > distance_threshold);
 
       // Update nodes
       node = node.data(node_data, d => d[name]);
@@ -289,8 +309,9 @@
       node.append("title")
           .text( d => d[name] );
 
-      d3.selectAll("rect").attr("fill", d => { d.equiv = .5;          //similarity(d);
-            return (is_anchor(d[name]))? anchor_color: node_color;}); //color((1-d.equiv)*scale);});
+      d3.selectAll(".node").attr("fill", d => { 
+            d.equiv = .5;          //similarity(d);
+            return (is_anchor(d[name]))? anchor_color: (d.name?.at(0) === 'NE')? named_entity_color: node_color;}); //color((1-d.equiv)*scale);});
       
       // Update lables
       text = text.data(node_data, d => d[name]);
@@ -316,7 +337,6 @@
 
       link.append("title")
           .text(d => `group: ${d.group}`);
-
       
       grouping = grouping.data(grouping_links, d => d.source[name] + "-" + d.target[name]);
       grouping.exit().remove();
@@ -329,7 +349,7 @@
 
       // Restart simulation
       simulation.nodes(node_data).on("tick", ticked);
-      simulation.force("link").links(filtered_links).strength(.05); //d => max_perplexity/d.perplexity*scale);
+      simulation.force("link").links(filtered_links).strength(.05);
       simulation.force("grouping").links(grouping_links).strength(.5);
       simulation.alpha(1).restart();
 
@@ -402,14 +422,13 @@
         if(!loaded.includes(node[name])){
           node_data.push(node);
           loaded.push(node[name]);
-          source.children.push(node);
-          node.parents = [source.name];
+          if(node !== source)
+            source.children.push(node);
+          node.type = 'DX';
         }else{
+          if(node !== source){return}
           let child = node_data.filter((n) => n[name] === node[name])[0];
-          if(!child.parents){child.parents = [];}
           source.children.push(child);
-          child.parents.push(source.name);
-          child.parents = [...new Set(child.parents)];
         }
       });
 
@@ -497,8 +516,9 @@
     // updates the depth of the edge search
     function update_depth(){
       depth = document.getElementById("depth").value;
+      window.localStorage.setItem('potter-depth', depth);
 
-      request_graph_data(selected_nodes, "UPDATE_DEPTH"); 
+      request_graph_data(selected_nodes, "UPDATE_DEPTH");
       update_graph();
     }
 
@@ -511,6 +531,7 @@
     // updates the edge weight threshold
     function update_threshold(){
       distance_threshold = document.getElementById("threshold").value;
+      window.localStorage.setItem('potter-threshold', distance_threshold);
 
       state_push(get_state(), "UPDATE THRESHOLD");
       update_graph();
@@ -518,6 +539,7 @@
 
     function update_scale(){
       scale = document.getElementById("scale").value;
+      window.localStorage.setItem('potter-scale', scale);
 
       state_push(get_state(), "UPDATE SCALE");
       update_graph();
@@ -525,7 +547,8 @@
 
     function update_topk(){
       topk = document.getElementById("topk").value;
-      localStorage.setItem('potter-topk', topk);
+      window.localStorage.setItem('potter-topk', topk);
+
       state_push(get_state(), "UPDATE TOPK");
       update_graph();
     }
@@ -588,13 +611,25 @@
 
     // updates the color of the root nodes
     function update_anchor_color(){
-      anchor_color = document.getElementById("anchor_color").value;
+      anchor_color = document.querySelector("#anchor_color").value;
+      window.localStorage.setItem('potter-anchor-color', anchor_color);
+
       state_push(get_state(), "UPDATE COLOR");
       update_graph();
     }
 
     function update_node_color(){
-      node_color = document.getElementById("node_color").value;
+      node_color = document.querySelector("#node_color").value;
+      window.localStorage.setItem('potter-node-color', node_color);
+
+      state_push(get_state(), "UPDATE COLOR");
+      update_graph();
+    }
+
+    function update_named_entity_color(){
+      named_entity_color = document.querySelector("#named_entity_color").value;
+      window.localStorage.setItem('potter-named-entity-color', named_entity_color);
+
       state_push(get_state(), "UPDATE COLOR");
       update_graph();
     }
@@ -680,6 +715,8 @@
     }
 
     function add_anchor(group){
+      console.log(clicked_node);
+      clicked_node.type = 'AN';
       select_node({name: clicked_node[name], direction: 1, group: group});
 
       hide_menu(node_drop_down);
@@ -687,7 +724,7 @@
 
     function select_node(node){
       selected_nodes.push(node);
-      document.getElementById('selected-nodes-text').value = selected_nodes.map((node) => node.name).join(',');
+      document.querySelector('#selected-nodes-text').value = selected_nodes.map((node) => node.name).join(',');
       update_selection();
     }
 
@@ -759,15 +796,21 @@
 
     function unpin(node){
       if(!node['pinned']) return;
-      node['fx'] = null;
-      node['fy'] = null;
+      node['fx'] = node['returnx'];
+      node['fy'] = node['returny'];
+      node['returnx'] = undefined;
+      node['returny'] = undefined;
       node['pinned'] = false;
       state_push(get_state(), `UNPIN: ${node[name]}`);
       hide_menu(drop_down);
+      update_graph();
     }
 
     function pin(node){
       if(node['pinned']) return;
+      node['returnx'] = node['tx'];
+      node['returny'] = node['ty'];
+
       node['fx'] = node['x'];
       node['fy'] = node['y'];
       node['pinned'] = true;
@@ -809,11 +852,14 @@
         "loaded": loaded,
         "selected_nodes": selected_nodes,
         "node_data": node_data,
+        "link_data": link_data,
         "depth": depth,
         "comparison": comparison,
         "name": name,
         "distance_threshold": distance_threshold,
         "anchor_color": anchor_color,
+        "node_color": node_color,
+        "named_entity_color": named_entity_color,
         "scale": scale,
         "coloring": coloring,
         "labeling": labeling,
@@ -825,15 +871,18 @@
     }
     
     function set_state(state){
+      links = state.links;
       loaded = state.loaded;
       selected_nodes = state.selected_nodes;
       node_data = state.node_data;
-      link_data = state.links;
+      link_data = JSON.parse(JSON.stringify(state.links));
       depth = state.depth;
       comparison = state.comparison;
       name = state.name;
       distance_threshold = state.distance_threshold;
       anchor_color = state.anchor_color;
+      node_color = state.node_color;
+      named_entity_color = state.named_entity_color;
       scale = state.scale;
       coloring = state.coloring;
       labeling = state.labeling;
@@ -905,6 +954,16 @@
       document.getElementById('selected-nodes-table').appendChild(tb);
 
       request_graph_data(selected_nodes, "UPDATE_SELECTION");
+    }
+
+    function add_edge(node, e){
+      params = new URLSearchParams({source: node.dx10, target: e.target.value});
+      fetch(`${invokeURL}:8000/api/graph/add_edge?${params.toString()}`)
+           .then((resp) => resp.json())
+           .then((data) => update_nodes(data, node))
+           .catch((error) => console.error(error));
+      hide_menu(document.querySelector('#add-edge-drop-down'));
+      e.target.value = '';
     }
     </script>
 </body>
